@@ -12,26 +12,29 @@ interface MovieCardProps {
   release_date?: string;
   first_air_date?: string;
   year?: string | number;
+  media_type?: 'movie' | 'tv';
 }
 
 const MovieCard = (props: MovieCardProps) => {
-  const { id, title, name, poster_path, image, vote_average, rating, release_date, first_air_date, year } = props;
+  const { id, title, name, poster_path, image, vote_average, rating, release_date, first_air_date, year, media_type } = props;
   
   const displayTitle = title || name || "Unknown Title";
   const displayImage = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : (image || "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2000");
   const displayRating = vote_average ? vote_average.toFixed(1) : (rating || "N/A");
   const displayYear = release_date ? release_date.split('-')[0] : (first_air_date ? first_air_date.split('-')[0] : (year || "N/A"));
 
+  const type = media_type || (name || first_air_date ? 'tv' : 'movie');
+
   return (
     <Link 
-      href={`/watch/${id}`}
+      href={`/watch/${id}?type=${type}`}
       className="group block cursor-pointer"
     >
-      <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition-all duration-500 group-hover:-translate-y-2 group-hover:border-accent/50 group-hover:shadow-2xl group-hover:shadow-accent/20">
+      <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-[1.03] group-hover:border-accent/40 group-hover:shadow-[0_20px_40px_rgba(231,76,60,0.2)]">
         <img 
           src={displayImage} 
           alt={displayTitle}
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
           loading="lazy"
         />
         
@@ -41,9 +44,9 @@ const MovieCard = (props: MovieCardProps) => {
               <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">4K UHD</span>
               <span className="text-[10px] font-bold text-white/60">{displayYear}</span>
            </div>
-           <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2 text-xs font-black text-black">
+           <div className="flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2 text-xs font-black text-black">
               <i className="ph-fill ph-play"></i> PLAY NOW
-           </button>
+           </div>
         </div>
 
         {/* Rating Badge */}
