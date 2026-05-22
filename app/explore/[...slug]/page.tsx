@@ -1,10 +1,37 @@
 import React from 'react';
 import MovieCard from '@/components/MovieCard';
 import { getTrendingMovies, getPopularTVSeries, getByGenre, GENRE_IDS } from '@/lib/tmdb';
+import { Metadata } from 'next';
 
 interface ExplorePageProps {
   params: {
     slug: string[];
+  };
+}
+
+export async function generateMetadata({ params }: ExplorePageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const { slug } = resolvedParams;
+  const type = slug[0];
+  const subType = slug[1];
+
+  let title = "Explore";
+  let description = "Discover our handpicked selection of movies and TV shows.";
+
+  if (type === 'trending') {
+    title = "Trending Movies";
+    description = "Stream the most popular and trending movies right now on CineStream.";
+  } else if (type === 'tv') {
+    title = "Popular TV Shows";
+    description = "Discover and watch trending and popular TV series on CineStream.";
+  } else if (type === 'genre' && subType) {
+    title = `${subType} Collection`;
+    description = `Explore our handpicked collection of ${subType} movies and TV shows on CineStream.`;
+  }
+
+  return {
+    title,
+    description,
   };
 }
 
