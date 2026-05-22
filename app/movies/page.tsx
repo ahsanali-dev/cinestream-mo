@@ -1,6 +1,12 @@
 import React from 'react';
 import MovieCard from '@/components/MovieCard';
 import { getTrendingMovies } from '@/lib/tmdb';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Feature Films | Watch Movies Online",
+  description: "Explore the latest cinematic masterpieces on CineStream. From high-octane action to heart-wrenching dramas, find your next favorite movie here.",
+};
 
 export default async function MoviesPage() {
   const movies = await getTrendingMovies();

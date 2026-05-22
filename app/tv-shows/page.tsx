@@ -1,6 +1,12 @@
 import React from 'react';
 import MovieCard from '@/components/MovieCard';
 import { getPopularTVSeries } from '@/lib/tmdb';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "TV Series | Binge-Worthy TV Shows",
+  description: "Dive into the world of binge-worthy television. From epic fantasies to intense crime thrillers, discover the best of small-screen entertainment.",
+};
 
 export default async function TVShowsPage() {
   const shows = await getPopularTVSeries();

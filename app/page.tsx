@@ -2,9 +2,16 @@ import Hero from "@/components/Hero";
 import MovieCard from "@/components/MovieCard";
 import AdBanner from "@/components/AdBanner";
 import Link from 'next/link';
+import ScrollRow from "@/components/ScrollRow";
 import { getTrendingMovies, getPopularTVSeries, getByGenre, GENRE_IDS } from "@/lib/tmdb";
 import { Suspense } from "react";
 import SkeletonCard from "@/components/SkeletonCard";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home | Watch Movies & TV Series Online",
+  description: "Stream the latest trending movies and popular TV shows in high definition on CineStream. Explore action, horror, comedy, and animation collections.",
+};
 
 export default async function Home() {
   const trendingMovies = await getTrendingMovies();
@@ -13,7 +20,7 @@ export default async function Home() {
   const horrorMovies = await getByGenre(GENRE_IDS.Horror);
 
   return (
-    <main className="min-h-screen pb-24 bg-[#0a0a0b]">
+    <main className="min-h-screen pb-24 bg-[#0a0a0b] -mt-20">
       <Hero />
       {/* <AdBanner /> */}
 
@@ -45,15 +52,15 @@ const MovieRow = ({ title, data, link }: { title: string, data: any[], link: str
                 View All <i className="ph-bold ph-caret-right ml-1"></i>
             </Link>
         </div>
-        <div className="flex overflow-x-auto gap-8 pb-10 no-scrollbar scroll-smooth">
-            <Suspense fallback={<div className="flex gap-8">{[1,2,3,4,5,6].map(i => <div key={i} className="w-44 md:w-56 shrink-0"><SkeletonCard /></div>)}</div>}>
+        <Suspense fallback={<div className="flex overflow-x-auto gap-8 pb-10 no-scrollbar scroll-smooth">{[1,2,3,4,5,6].map(i => <div key={i} className="w-44 md:w-56 shrink-0"><SkeletonCard /></div>)}</div>}>
+            <ScrollRow>
                 {data.map((item: any) => (
                     <div key={item.id} className="w-44 md:w-56 shrink-0">
                         <MovieCard {...item} />
                     </div>
                 ))}
-            </Suspense>
-        </div>
+            </ScrollRow>
+        </Suspense>
     </section>
 );
 
