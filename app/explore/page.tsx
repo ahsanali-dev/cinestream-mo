@@ -1,16 +1,26 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import MovieCard from '@/components/MovieCard';
 import { searchMovies, GENRE_IDS, getByGenre } from '@/lib/tmdb';
 import SkeletonCard from '@/components/SkeletonCard';
+import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function ExplorePage() {
-  const [searchQuery, setSearchQuery] = useState('');
+function ExploreContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const q = searchParams.get('q') || '';
+
+  const [searchQuery, setSearchQuery] = useState(q);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('Trending');
 
   const genres = ["Trending", "Action", "Comedy", "Horror", "Animation", "SciFi", "Thriller"];
+
+  // Sync state if URL search query changes
+  useEffect(() => {
+    setSearchQuery(q);
+  }, [q]);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -33,6 +43,17 @@ export default function ExplorePage() {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, selectedGenre]);
 
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    const params = new URLSearchParams(window.location.search);
+    if (val) {
+      params.set('q', val);
+    } else {
+      params.delete('q');
+    }
+    router.replace(`/explore?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen p-8 md:p-16 bg-[#0a0a0b] animate-fade-in">
       <div className="mb-16 max-w-3xl">
@@ -43,7 +64,7 @@ export default function ExplorePage() {
             type="text" 
             placeholder="Search by title, actor, or genre..." 
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full rounded-[32px] border border-white/10 bg-white/5 py-6 pl-16 pr-8 text-lg text-white outline-none focus:border-accent/40 focus:bg-white/10 transition-all shadow-2xl backdrop-blur-xl"
           />
         </div>
@@ -58,7 +79,7 @@ export default function ExplorePage() {
           {genres.map((cat) => (
             <button 
               key={cat} 
-              onClick={() => { setSelectedGenre(cat); setSearchQuery(''); }}
+              onClick={() => { setSelectedGenre(cat); handleSearchChange(''); }}
               className={`rounded-2xl border px-8 py-3.5 text-xs font-black uppercase tracking-widest transition-all ${
                 selectedGenre === cat && !searchQuery
                 ? 'bg-accent border-accent text-white shadow-xl shadow-accent/20 scale-105' 
@@ -102,5 +123,17 @@ export default function ExplorePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ExplorePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen p-8 md:p-16 bg-[#0a0a0b] flex items-center justify-center">
+        <p className="text-xl font-bold uppercase tracking-widest text-white/40">Loading Explore...</p>
+      </div>
+    }>
+      <ExploreContent />
+    </Suspense>
   );
 }
