@@ -52,11 +52,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const isMp4 = Boolean(
+      streamData.masterPlaylistUrl.includes(".mp4") ||
+      streamData.provider?.toLowerCase().includes("netmirror")
+    );
+
     const encryptedMasterToken = encryptStreamUrl(
       streamData.masterPlaylistUrl,
       streamData.referer
     );
-    const proxiedMasterUrl = `/api/stream/proxy?d=${encryptedMasterToken}`;
+
+    // For direct MP4 streams (NetMirror / high-bitrate CDN), deliver direct CDN URL so browser streams without Vercel proxy 426 blocks.
+    // For HLS streams (VixSrc), deliver proxied master playlist URL for AES-128 key & manifest rewriting.
+    const finalStreamUrl = isMp4
+      ? streamData.masterPlaylistUrl
+      : `/api/stream/proxy?d=${encryptedMasterToken}`;
 
     const proxiedSubtitles = streamData.subtitles.map((sub) => ({
       ...sub,
@@ -70,15 +80,10 @@ export async function GET(request: NextRequest) {
         : undefined,
     }));
 
-    const isMp4 = Boolean(
-      streamData.masterPlaylistUrl.includes(".mp4") ||
-      streamData.provider?.toLowerCase().includes("netmirror")
-    );
-
     return NextResponse.json(
       {
         success: true,
-        streamUrl: proxiedMasterUrl,
+        streamUrl: finalStreamUrl,
         format: isMp4 ? "mp4" : "hls",
         qualities: streamData.qualities.map((q) => ({
           quality: q.quality,

@@ -95,19 +95,26 @@ export async function GET(request: NextRequest) {
   }
   targetUrl = sanitizedTargetUrl;
 
-  try {
-    let requestOrigin = "https://vixsrc.to";
-    try {
-      if (referer) {
-        requestOrigin = new URL(referer).origin;
-      }
-    } catch {}
+  // If target URL is an MP4 (e.g. NetMirror / CDN MP4), redirect directly (307) so browser plays directly from edge CDN without hitting Vercel proxy 426 blocks or timeouts
+  const isDirectMp4 = Boolean(
+    targetUrl.includes(".mp4") ||
+    targetUrl.includes("hakunaymatata.com") ||
+    targetUrl.includes("bcdnxw")
+  );
+  if (isDirectMp4) {
+    return NextResponse.redirect(targetUrl, {
+      status: 307,
+      headers: CORS_HEADERS,
+    });
+  }
 
+  try {
     const requestHeaders: Record<string, string> = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      Referer: referer,
-      Origin: requestOrigin,
+      Accept: "*/*",
+      "Accept-Language": "en-US,en;q=0.9",
+      Referer: referer || "https://vixsrc.to/",
     };
 
     const clientRange = request.headers.get("range");
@@ -132,6 +139,14 @@ export async function GET(request: NextRequest) {
     } finally {
       // Clear connect timeout immediately once headers are received so active video transfers don't get aborted!
       clearTimeout(connectTimeout);
+    }
+
+    // If upstream CDN blocked datacenter with 426 Upgrade Required, redirect client directly
+    if (upstreamRes.status === 426) {
+      return NextResponse.redirect(targetUrl, {
+        status: 307,
+        headers: CORS_HEADERS,
+      });
     }
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
@@ -183,10 +198,22 @@ export async function GET(request: NextRequest) {
           );
           rewrittenLines.push(rewrittenTag);
         } else {
-          // It is a stream segment (.ts / .jpg) or child variant playlist link
-          const fullSegmentUrl = sanitizeTargetUrl(line, targetUrl) || (line.startsWith("http") ? line : new URL(line, targetUrl).href);
-          const encryptedToken = encryptStreamUrl(fullSegmentUrl, referer);
-          rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
+          // Check if line is a child playlist or direct video segment
+          const isChildPlaylist = line.includes(".m3u8") || line.includes("/playlist");
+          
+          if (isChildPlaylist) {
+            const fullChildUrl = sanitizeTargetUrl(line, targetUrl) || (line.startsWith("http") ? line : new URL(line, targetUrl).href);
+            const encryptedToken = encryptStreamUrl(fullChildUrl, referer);
+            rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
+          } else if (line.startsWith("http://") || line.startsWith("https://")) {
+            // Absolute segment URL from edge CDN (e.g. *.redzebra93.fun) has native CORS (*). Keep direct for ultra-fast zero-proxy streaming.
+            rewrittenLines.push(line);
+          } else {
+            // Relative segment (.ts / .jpg)
+            const fullSegmentUrl = sanitizeTargetUrl(line, targetUrl) || new URL(line, targetUrl).href;
+            const encryptedToken = encryptStreamUrl(fullSegmentUrl, referer);
+            rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
+          }
         }
       }
 
