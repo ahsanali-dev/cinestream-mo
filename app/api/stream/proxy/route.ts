@@ -52,12 +52,38 @@ function sanitizeTargetUrl(rawUrl: string, baseUrl: string): string | null {
   }
 }
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+/**
+ * Dynamically resolves the exact legitimate referer required by each upstream CDN
+ */
+function getTargetReferer(targetUrl: string, existingReferer?: string): string {
+  if (
+    targetUrl.includes("hakunaymatata.com") ||
+    targetUrl.includes("bcdnxw") ||
+    targetUrl.includes("net27.cc") ||
+    targetUrl.includes("net77.cc") ||
+    targetUrl.includes("videodownloader")
+  ) {
+    return "https://videodownloader.site/";
+  }
+  if (
+    targetUrl.includes("vixsrc.to") ||
+    targetUrl.includes("redzebra93.fun") ||
+    targetUrl.includes("vix-content.net")
+  ) {
+    return "https://vixsrc.to/";
+  }
+  return existingReferer || "https://videodownloader.site/";
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("d") || searchParams.get("token");
 
   let targetUrl: string | null = null;
-  let referer = "https://vixsrc.to/";
+  let referer: string | undefined = undefined;
 
   if (token) {
     const decrypted = decryptStreamUrl(token);
@@ -86,7 +112,8 @@ export async function GET(request: NextRequest) {
   }
 
   // Sanitize target URL against referer
-  const sanitizedTargetUrl = sanitizeTargetUrl(targetUrl, referer);
+  const resolvedReferer = getTargetReferer(targetUrl, referer);
+  const sanitizedTargetUrl = sanitizeTargetUrl(targetUrl, resolvedReferer);
   if (!sanitizedTargetUrl) {
     return new NextResponse("Invalid upstream URL", {
       status: 400,
@@ -96,12 +123,18 @@ export async function GET(request: NextRequest) {
   targetUrl = sanitizedTargetUrl;
 
   try {
+    let targetHost = "";
+    try {
+      targetHost = new URL(targetUrl).hostname;
+    } catch {}
+
     const requestHeaders: Record<string, string> = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       Accept: "*/*",
       "Accept-Language": "en-US,en;q=0.9",
-      Referer: referer || "https://vixsrc.to/",
+      Referer: resolvedReferer,
+      ...(targetHost ? { Host: targetHost } : {}),
     };
 
     const clientRange = request.headers.get("range");
@@ -126,14 +159,6 @@ export async function GET(request: NextRequest) {
     } finally {
       // Clear connect timeout immediately once headers are received so active video transfers don't get aborted!
       clearTimeout(connectTimeout);
-    }
-
-    // If upstream CDN blocked datacenter with 426 Upgrade Required, redirect client directly
-    if (upstreamRes.status === 426) {
-      return NextResponse.redirect(targetUrl, {
-        status: 307,
-        headers: CORS_HEADERS,
-      });
     }
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
