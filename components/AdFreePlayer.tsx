@@ -84,11 +84,11 @@ export default function AdFreePlayer({
   initialAudioLang,
   serverLanguages = [],
   servers = [
-    { id: "server1", name: "Server 1 (VixSrc Ultra HD)", badge: "Fast 1080p", description: "Ultra-fast direct HLS with multi-audio" },
-    { id: "server2", name: "Server 2 (Hindi Dubbed & Multi-Audio)", badge: "Hindi Dubbed", description: "Dedicated Hindi dubbed & Indian multi-audio" },
-    { id: "server3", name: "Server 3 (NetMirror Ultra Cloud)", badge: "1080p Cloud", description: "NetMirror high bitrate stream with 16 subtitles" },
-    { id: "server4", name: "Server 4 (VidSrc Indian Mirror)", badge: "Indian Mirror", description: "Indian & global CDN multi-audio backup" },
-    { id: "server5", name: "Server 5 (CineStream Fast Direct)", badge: "Direct HD", description: "Direct high-speed cloud stream" },
+    { id: "server1", name: "Server 1 (Ultra Cloud Direct)", badge: "1080p Cloud", description: "Ultra-fast direct 1080p stream with 16 subtitles" },
+    { id: "server2", name: "Server 2 (VixSrc Multi-Audio)", badge: "Multi-Audio HD", description: "Ultra-fast direct HLS with multi-audio dubs" },
+    { id: "server3", name: "Server 3 (CineStream Fast Direct)", badge: "Fast HD", description: "Direct high-speed stream backup" },
+    { id: "server4", name: "Server 4 (Global CDN Backup)", badge: "Backup", description: "Global CDN direct stream backup" },
+    { id: "server5", name: "Server 5 (Cloud Direct Stream)", badge: "Direct", description: "Direct unblocked cloud media stream" },
   ],
   currentServer = "server1",
   onServerChange,
@@ -929,7 +929,7 @@ export default function AdFreePlayer({
         </div>
       )}
 
-      {/* Error Fallback Prompt */}
+      {/* Error Fallback Prompt with Multi-Server Switch */}
       {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md z-30 p-8 text-center space-y-4">
           <div className="h-14 w-14 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center text-accent text-2xl mb-1">
@@ -941,9 +941,26 @@ export default function AdFreePlayer({
             Playback Interrupted
           </h3>
           <p className="text-xs text-white/60 max-w-sm">
-            Direct stream temporarily interrupted. Please retry playback or check your network.
+            Current server connection interrupted. Switch to backup server or retry playback.
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {onServerChange && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setHasError(false);
+                  setIsLoading(true);
+                  const nextServer = currentServer === "server1" ? "server2" : "server1";
+                  onServerChange(nextServer);
+                  setLanguageNotice(`Switched to ${nextServer === "server1" ? "Server 1 (Ultra Cloud)" : "Server 2 (Multi-Audio)"}`);
+                  setTimeout(() => setLanguageNotice(null), 3000);
+                }}
+                className="px-5 py-2.5 bg-white text-black hover:bg-white/90 rounded-xl text-xs font-black uppercase tracking-wider shadow-lg transition-all cursor-pointer"
+              >
+                Switch to {currentServer === "server1" ? "Server 2 (Backup)" : "Server 1 (Cloud)"}
+              </button>
+            )}
             <button
               type="button"
               onClick={(e) => {
