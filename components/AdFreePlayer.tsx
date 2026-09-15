@@ -280,6 +280,37 @@ export default function AdFreePlayer({
     }
   }, [initialTime, resumeTime, duration, currentTime]);
 
+  // Track attempted servers during a session to prevent infinite failover loops
+  const attemptedServersRef = useRef<Set<string>>(new Set([currentServer]));
+
+  // Reset attempted servers when mediaId changes or user manually switches server
+  useEffect(() => {
+    attemptedServersRef.current = new Set([currentServer]);
+  }, [mediaId, currentServer]);
+
+  const handleAutoFailover = useCallback(() => {
+    if (!onServerChange || !servers || servers.length <= 1) {
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
+
+    // Find the next server in the list that hasn't been attempted yet
+    const nextServer = servers.find((s) => !attemptedServersRef.current.has(s.id));
+    if (nextServer) {
+      attemptedServersRef.current.add(nextServer.id);
+      setIsLoading(true);
+      setHasError(false);
+      setLanguageNotice(`Auto-switching to ${nextServer.name}...`);
+      setTimeout(() => setLanguageNotice(null), 3500);
+      onServerChange(nextServer.id);
+    } else {
+      // All available servers were attempted and failed
+      setHasError(true);
+      setIsLoading(false);
+    }
+  }, [onServerChange, servers]);
+
   // Initialize HLS.js
   useEffect(() => {
     const video = videoRef.current;
@@ -315,8 +346,7 @@ export default function AdFreePlayer({
       };
 
       const onError = () => {
-        setHasError(true);
-        setIsLoading(false);
+        handleAutoFailover();
       };
 
       video.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -462,7 +492,7 @@ export default function AdFreePlayer({
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              if (networkRetryCount < 5) {
+              if (networkRetryCount < 3) {
                 networkRetryCount++;
                 setTimeout(() => {
                   if (hlsRef.current) {
@@ -470,22 +500,22 @@ export default function AdFreePlayer({
                   }
                 }, 500);
               } else {
-                setHasError(true);
                 hls.destroy();
+                handleAutoFailover();
               }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              if (mediaRetryCount < 3) {
+              if (mediaRetryCount < 2) {
                 mediaRetryCount++;
                 hls.recoverMediaError();
               } else {
-                setHasError(true);
                 hls.destroy();
+                handleAutoFailover();
               }
               break;
             default:
-              setHasError(true);
               hls.destroy();
+              handleAutoFailover();
               break;
           }
         }
@@ -498,10 +528,10 @@ export default function AdFreePlayer({
         video.play().then(() => setIsPlaying(true)).catch(() => {});
       });
       video.addEventListener("error", () => {
-        setHasError(true);
+        handleAutoFailover();
       });
     } else {
-      setHasError(true);
+      handleAutoFailover();
     }
 
     return () => {
@@ -510,7 +540,7 @@ export default function AdFreePlayer({
         hlsRef.current = null;
       }
     };
-  }, [streamUrl, retryKey]);
+  }, [streamUrl, retryKey, handleAutoFailover]);
 
   // Video Event Handlers
   const handleTimeUpdate = () => {

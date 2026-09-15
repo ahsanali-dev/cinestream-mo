@@ -247,6 +247,11 @@ export default function PlayerContainer({
           }
           setDirectError(null);
         } else {
+          // If server1 failed on this title, automatically attempt server2 before giving up
+          if (selectedServer === "server1") {
+            setSelectedServer("server2");
+            return;
+          }
           if (Array.isArray(data.availableLanguages) && data.availableLanguages.length > 0) {
             setServerLanguages(data.availableLanguages);
           }
