@@ -324,9 +324,9 @@ export interface ServerOption {
 }
 
 export const AVAILABLE_SERVERS: ServerOption[] = [
-  { id: "server1", name: "Server 1 (Ultra Cloud Direct)", badge: "1080p Cloud", description: "Ultra-fast direct 1080p stream with 16 subtitles" },
-  { id: "server2", name: "Server 2 (VixSrc Multi-Audio)", badge: "Multi-Audio HD", description: "Ultra-fast direct HLS with multi-audio dubs" },
-  { id: "server3", name: "Server 3 (CineStream Fast Direct)", badge: "Fast HD", description: "Direct high-speed stream backup" },
+  { id: "server1", name: "Server 1 (CineStream Ultra Multi-Audio)", badge: "1080p Ultra HD", description: "Ultra-fast direct HLS with multi-audio dubs & subtitles" },
+  { id: "server2", name: "Server 2 (Global Fast Direct)", badge: "Multi-Audio HD", description: "Direct high-speed stream with multi-language support" },
+  { id: "server3", name: "Server 3 (CineStream Cloud Direct)", badge: "Fast HD", description: "Direct stream cloud backup" },
   { id: "server4", name: "Server 4 (Global CDN Backup)", badge: "Backup", description: "Global CDN direct stream backup" },
   { id: "server5", name: "Server 5 (Cloud Direct Stream)", badge: "Direct", description: "Direct unblocked cloud media stream" },
 ];
@@ -336,7 +336,7 @@ const languagesCache = new Map<string, { data: ServerLanguageItem[]; expiresAt: 
 
 /**
  * Multi-Server Parallel Prober & Language Aggregator
- * Probes all streaming servers in parallel to discover all genuine audio dubs available across servers
+ * Probes streaming servers in parallel to discover all genuine audio dubs available across servers
  */
 export async function probeAllServerLanguages(
   tmdbId: string,
@@ -352,9 +352,9 @@ export async function probeAllServerLanguages(
   }
 
   // Probe VixSrc and NetMirror in parallel with 4s timeout
-  const [embedRes, vixRes] = await Promise.allSettled([
-    extractNetMirrorEmbed(tmdbId, type, season, episode),
+  const [vixRes, embedRes] = await Promise.allSettled([
     extractVixSrcHLS(tmdbId, type, season, episode),
+    extractNetMirrorEmbed(tmdbId, type, season, episode),
   ]);
 
   const aggregated: ServerLanguageItem[] = [];
@@ -370,48 +370,48 @@ export async function probeAllServerLanguages(
 
   const defaultOrigInfo = resolveLanguageInfo(origLang, origLang);
 
-  // 1. Server 1 (Ultra Cloud Direct - NetMirror)
-  if (embedRes.status === "fulfilled" && embedRes.value && embedRes.value.masterPlaylistUrl) {
-    addTrack({
-      id: "s1_orig",
-      name: defaultOrigInfo.name || "English",
-      code: defaultOrigInfo.code || "ENG",
-      serverId: "server1",
-      serverName: "Server 1 (Ultra Cloud Direct)",
-      serverBadge: "1080p Cloud",
-      provider: "Ultra Cloud Direct",
-      isDefault: true,
-    });
-  }
-
-  // 2. Server 2 (VixSrc Multi-Audio) - Real dynamic audio tracks extracted from HLS manifest
+  // 1. Server 1 & Server 2 (VixSrc Direct HLS Multi-Audio) - Genuine audio tracks from master playlist
   if (vixRes.status === "fulfilled" && vixRes.value && vixRes.value.masterPlaylistUrl) {
     if (vixRes.value.audioTracks.length > 0) {
       for (const track of vixRes.value.audioTracks) {
         const info = resolveLanguageInfo(track.lang, track.label);
         addTrack({
-          id: `s2_${info.code}_${aggregated.length}`,
+          id: `s1_${info.code}_${aggregated.length}`,
           name: info.name,
           code: info.code,
-          serverId: "server2",
-          serverName: "Server 2 (VixSrc Multi-Audio)",
-          serverBadge: "Multi-Audio HD",
+          serverId: "server1",
+          serverName: "Server 1 (CineStream Ultra Multi-Audio)",
+          serverBadge: "1080p Ultra HD",
           provider: "CineStream Cloud Direct (VixSrc)",
           isDefault: aggregated.length === 0,
         });
       }
     } else {
       addTrack({
-        id: "s2_orig_def",
+        id: "s1_orig_def",
         name: defaultOrigInfo.name || "English",
         code: defaultOrigInfo.code || "ENG",
-        serverId: "server2",
-        serverName: "Server 2 (VixSrc Multi-Audio)",
-        serverBadge: "Multi-Audio HD",
+        serverId: "server1",
+        serverName: "Server 1 (CineStream Ultra Multi-Audio)",
+        serverBadge: "1080p Ultra HD",
         provider: "CineStream Cloud Direct (VixSrc)",
-        isDefault: aggregated.length === 0,
+        isDefault: true,
       });
     }
+  }
+
+  // 2. NetMirror secondary check if no VixSrc audio tracks
+  if (aggregated.length === 0 && embedRes.status === "fulfilled" && embedRes.value && embedRes.value.masterPlaylistUrl) {
+    addTrack({
+      id: "s1_embed_orig",
+      name: defaultOrigInfo.name || "English",
+      code: defaultOrigInfo.code || "ENG",
+      serverId: "server1",
+      serverName: "Server 1 (CineStream Ultra Multi-Audio)",
+      serverBadge: "1080p Ultra HD",
+      provider: "Ultra Cloud Direct",
+      isDefault: true,
+    });
   }
 
   // Priority Sort: Original language -> English -> Other languages alphabetically
@@ -458,39 +458,27 @@ export async function extractDirectStream(
 
   let streamData: StreamData | null = null;
 
-  // Server 1: Ultra Cloud Direct (Fastest 1080p, Zero Buffering) -> Fallback to VixSrc
-  if (serverId === "server1" || serverId === "netmirror") {
-    streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
-    if (!streamData) streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
-  }
-  // Server 2: VixSrc Multi-Audio HD -> Fallback to NetMirror
-  else if (serverId === "server2" || serverId === "vixsrc") {
+  // Server 1 & Server 2: VixSrc Ultra Multi-Audio Direct HLS (Reliable, Unblocked, Full HD)
+  if (!serverId || serverId === "server1" || serverId === "server2" || serverId === "vixsrc") {
     streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
     if (!streamData) streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
   }
-  // Server 3: CineStream Fast Direct
-  else if (serverId === "server3") {
-    streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
-    if (!streamData) streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
-  }
-  // Server 4: Global CDN Backup
-  else if (serverId === "server4") {
+  // Server 3 / 4 / 5: Fast Direct HLS & Cloud Backups
+  else if (serverId === "server3" || serverId === "server4" || serverId === "server5") {
     streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
     if (!streamData) streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
-  }
-  // Server 5: Cloud Direct Stream
-  else if (serverId === "server5") {
+  } else if (serverId === "netmirror") {
     streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
     if (!streamData) streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
   }
 
-  // Automatic Bidirectional Cascading Fallback if server-specific was empty
+  // Automatic Cascading Fallback if server-specific was empty
   if (!streamData || !streamData.masterPlaylistUrl) {
-    streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
+    streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
   }
 
   if (!streamData || !streamData.masterPlaylistUrl) {
-    streamData = await extractVixSrcHLS(tmdbId, type, season, episode, lang);
+    streamData = await extractNetMirrorEmbed(tmdbId, type, season, episode);
   }
 
   if (streamData && streamData.masterPlaylistUrl) {

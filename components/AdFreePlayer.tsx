@@ -84,9 +84,9 @@ export default function AdFreePlayer({
   initialAudioLang,
   serverLanguages = [],
   servers = [
-    { id: "server1", name: "Server 1 (Ultra Cloud Direct)", badge: "1080p Cloud", description: "Ultra-fast direct 1080p stream with 16 subtitles" },
-    { id: "server2", name: "Server 2 (VixSrc Multi-Audio)", badge: "Multi-Audio HD", description: "Ultra-fast direct HLS with multi-audio dubs" },
-    { id: "server3", name: "Server 3 (CineStream Fast Direct)", badge: "Fast HD", description: "Direct high-speed stream backup" },
+    { id: "server1", name: "Server 1 (CineStream Ultra Multi-Audio)", badge: "1080p Ultra HD", description: "Ultra-fast direct HLS with multi-audio dubs & subtitles" },
+    { id: "server2", name: "Server 2 (Global Fast Direct)", badge: "Multi-Audio HD", description: "Direct high-speed stream with multi-language support" },
+    { id: "server3", name: "Server 3 (CineStream Cloud Direct)", badge: "Fast HD", description: "Direct stream cloud backup" },
     { id: "server4", name: "Server 4 (Global CDN Backup)", badge: "Backup", description: "Global CDN direct stream backup" },
     { id: "server5", name: "Server 5 (Cloud Direct Stream)", badge: "Direct", description: "Direct unblocked cloud media stream" },
   ],
