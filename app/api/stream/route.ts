@@ -62,11 +62,8 @@ export async function GET(request: NextRequest) {
       streamData.referer
     );
 
-    // For direct MP4 streams (NetMirror / high-bitrate CDN), deliver direct CDN URL so browser streams without Vercel proxy 426 blocks.
-    // For HLS streams (VixSrc), deliver proxied master playlist URL for AES-128 key & manifest rewriting.
-    const finalStreamUrl = isMp4
-      ? streamData.masterPlaylistUrl
-      : `/api/stream/proxy?d=${encryptedMasterToken}`;
+    // All streams route through proxy to inject correct upstream Referer headers (preventing CDN 429 blocks on live domain)
+    const finalStreamUrl = `/api/stream/proxy?d=${encryptedMasterToken}`;
 
     const proxiedSubtitles = streamData.subtitles.map((sub) => ({
       ...sub,

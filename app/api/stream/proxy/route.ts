@@ -95,19 +95,6 @@ export async function GET(request: NextRequest) {
   }
   targetUrl = sanitizedTargetUrl;
 
-  // If target URL is an MP4 (e.g. NetMirror / CDN MP4), redirect directly (307) so browser plays directly from edge CDN without hitting Vercel proxy 426 blocks or timeouts
-  const isDirectMp4 = Boolean(
-    targetUrl.includes(".mp4") ||
-    targetUrl.includes("hakunaymatata.com") ||
-    targetUrl.includes("bcdnxw")
-  );
-  if (isDirectMp4) {
-    return NextResponse.redirect(targetUrl, {
-      status: 307,
-      headers: CORS_HEADERS,
-    });
-  }
-
   try {
     const requestHeaders: Record<string, string> = {
       "User-Agent":
