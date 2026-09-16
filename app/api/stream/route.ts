@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   extractDirectStream,
   probeAllServerLanguages,
+  getEmbedFallbackUrl,
   AVAILABLE_SERVERS,
 } from "@/lib/stream-extractor";
 import { encryptStreamUrl } from "@/lib/stream-crypto";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, Range, X-Requested-With",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, Range, X-Requested-With",
 };
 
 export async function GET(request: NextRequest) {
@@ -20,18 +25,24 @@ export async function GET(request: NextRequest) {
   const episode = parseInt(searchParams.get("episode") || "1", 10);
   const lang = searchParams.get("lang") || undefined;
   const server = searchParams.get("server") || "server1";
-
   const origLang = searchParams.get("origLang") || "en";
 
   if (!id) {
     return NextResponse.json(
       { success: false, error: "Missing id parameter" },
-      { status: 400, headers: CORS_HEADERS }
+      { status: 400, headers: CORS_HEADERS },
     );
   }
 
   // Clean ID if slug format was passed (e.g. "550-fight-club")
   const numericId = id.split("-")[0];
+  const fallbackEmbedUrl = getEmbedFallbackUrl(
+    numericId,
+    type,
+    season,
+    episode,
+    server,
+  );
 
   try {
     // Run stream extraction for requested server & probe all server languages in parallel
@@ -41,28 +52,47 @@ export async function GET(request: NextRequest) {
     ]);
 
     if (!streamData || !streamData.masterPlaylistUrl) {
+      // Guaranteed fast cloud stream fallback
       return NextResponse.json(
         {
-          success: false,
-          error: "Direct HLS stream currently unavailable for this title on selected server",
+          success: true,
+          streamUrl: null,
+          embedUrl: fallbackEmbedUrl,
+          format: "embed",
+          qualities: [],
+          subtitles: [],
+          audioTracks: [],
+          provider: "CineStream Ultra Cloud Stream",
+          currentServer: server,
           availableServers: AVAILABLE_SERVERS,
-          availableLanguages,
+          availableLanguages:
+            availableLanguages && availableLanguages.length > 0
+              ? availableLanguages
+              : [],
         },
-        { headers: CORS_HEADERS }
+        {
+          headers: {
+            "Cache-Control":
+              "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+            Pragma: "no-cache",
+            Expires: "0",
+            ...CORS_HEADERS,
+          },
+        },
       );
     }
 
     const isMp4 = Boolean(
       streamData.masterPlaylistUrl.includes(".mp4") ||
-      streamData.provider?.toLowerCase().includes("netmirror")
+        streamData.provider?.toLowerCase().includes("netmirror"),
     );
 
     const encryptedMasterToken = encryptStreamUrl(
       streamData.masterPlaylistUrl,
-      streamData.referer
+      streamData.referer,
     );
 
-    // All streams route through proxy to inject correct upstream Referer headers (preventing CDN 429 blocks on live domain)
+    // All streams route through proxy to inject correct upstream Referer headers
     const finalStreamUrl = `/api/stream/proxy?d=${encryptedMasterToken}`;
 
     const proxiedSubtitles = streamData.subtitles.map((sub) => ({
@@ -81,6 +111,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         streamUrl: finalStreamUrl,
+        embedUrl: fallbackEmbedUrl,
         format: isMp4 ? "mp4" : "hls",
         qualities: streamData.qualities.map((q) => ({
           quality: q.quality,
@@ -96,18 +127,31 @@ export async function GET(request: NextRequest) {
       },
       {
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-          "Pragma": "no-cache",
-          "Expires": "0",
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
           ...CORS_HEADERS,
         },
-      }
+      },
     );
   } catch (error) {
     console.error("Stream API route error:", error);
     return NextResponse.json(
-      { success: false, error: "Internal stream resolution error" },
-      { status: 500, headers: CORS_HEADERS }
+      {
+        success: true,
+        streamUrl: null,
+        embedUrl: fallbackEmbedUrl,
+        format: "embed",
+        qualities: [],
+        subtitles: [],
+        audioTracks: [],
+        provider: "CineStream Cloud Stream",
+        currentServer: server,
+        availableServers: AVAILABLE_SERVERS,
+        availableLanguages: [],
+      },
+      { status: 200, headers: CORS_HEADERS },
     );
   }
 }
@@ -118,4 +162,3 @@ export async function OPTIONS() {
     headers: CORS_HEADERS,
   });
 }
-

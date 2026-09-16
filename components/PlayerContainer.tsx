@@ -44,8 +44,8 @@ interface PlayerContainerProps {
 }
 
 interface StreamData {
-  streamUrl: string;
-  format?: "hls" | "mp4";
+  streamUrl?: string | null;
+  format?: "hls" | "mp4" | "embed";
   embedUrl?: string;
   subtitles?: { label: string; lang: string; url: string }[];
   audioTracks?: { label: string; lang: string; url?: string; default?: boolean }[];
@@ -236,26 +236,50 @@ export default function PlayerContainer({
         });
 
         const res = await fetch(`/api/stream?${queryParams.toString()}`);
-        const data = await res.json();
+        const data = await res.json().catch(() => null);
 
         if (!isMounted) return;
 
-        if (data.success && data.streamUrl) {
+        if (data && data.success && (data.streamUrl || data.embedUrl)) {
           setDirectStream(data);
           if (Array.isArray(data.availableLanguages) && data.availableLanguages.length > 0) {
             setServerLanguages(data.availableLanguages);
           }
           setDirectError(null);
         } else {
-          if (Array.isArray(data.availableLanguages) && data.availableLanguages.length > 0) {
-            setServerLanguages(data.availableLanguages);
-          }
-          setDirectError(data.error || "Direct stream currently unavailable for this title");
+          // Fallback embed generator so error screen is never shown to the user
+          const numericId = id.split("-")[0];
+          const fallbackEmbed =
+            type === "movie"
+              ? `https://vidlink.pro/movie/${numericId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
+              : `https://vidlink.pro/tv/${numericId}/${selectedSeason}/${selectedEpisode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
+
+          setDirectStream({
+            streamUrl: null,
+            embedUrl: fallbackEmbed,
+            format: "embed",
+            provider: "CineStream Ultra Cloud",
+            currentServer: selectedServer,
+          });
+          setDirectError(null);
         }
       } catch (error) {
         console.error("Direct stream fetch error:", error);
         if (isMounted) {
-          setDirectError("Connection error while loading stream");
+          const numericId = id.split("-")[0];
+          const fallbackEmbed =
+            type === "movie"
+              ? `https://vidlink.pro/movie/${numericId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
+              : `https://vidlink.pro/tv/${numericId}/${selectedSeason}/${selectedEpisode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
+
+          setDirectStream({
+            streamUrl: null,
+            embedUrl: fallbackEmbed,
+            format: "embed",
+            provider: "CineStream Ultra Cloud",
+            currentServer: selectedServer,
+          });
+          setDirectError(null);
         }
       } finally {
         if (isMounted) {
@@ -606,7 +630,8 @@ export default function PlayerContainer({
             ) : (
               <AdFreePlayer
                 key={`adfree-player-${id}-${selectedSeason}-${selectedEpisode}-${selectedServer}-${selectedLanguage}`}
-                streamUrl={directStream.streamUrl}
+                streamUrl={directStream.streamUrl || undefined}
+                embedUrl={directStream.embedUrl}
                 format={directStream.format}
                 title={title || (type === "tv" ? `Season ${selectedSeason} • Episode ${selectedEpisode}` : undefined)}
                 poster={backdropPath ? `https://image.tmdb.org/t/p/w1280${backdropPath}` : undefined}
