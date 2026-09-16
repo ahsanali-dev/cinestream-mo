@@ -154,6 +154,59 @@ export default function AdFreePlayer({
   // Internal Retry Key for self-contained player reload
   const [retryKey, setRetryKey] = useState(0);
 
+  // Ad-Shield Engine: Silent Popup Interceptor & Anti-Redirect Guard
+  useEffect(() => {
+    // 1. Intercept popup window creation from ads
+    const originalWindowOpen = window.open;
+    try {
+      window.open = function (url?: string | URL, target?: string, features?: string) {
+        if (!url) return null;
+        const strUrl = url.toString();
+        // Allow legitimate internal navigation or TMDB links
+        if (
+          strUrl.startsWith("/") ||
+          strUrl.includes(window.location.hostname) ||
+          strUrl.includes("themoviedb.org")
+        ) {
+          return originalWindowOpen.call(window, url, target, features);
+        }
+        // Silently block third-party advertisement popups/redirects
+        return null;
+      };
+    } catch {}
+
+    // 2. Prevent Top-Level Window Location Hijacking (where iframe redirects the parent page)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (document.activeElement && document.activeElement.tagName === "IFRAME") {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    // 3. Focus-Trap: If an ad attempts background window spawning, immediately reclaim focus
+    let blurTimeout: NodeJS.Timeout | null = null;
+    const handleWindowBlur = () => {
+      if (document.activeElement && document.activeElement.tagName === "IFRAME") {
+        blurTimeout = setTimeout(() => {
+          window.focus();
+        }, 80);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      try {
+        window.open = originalWindowOpen;
+      } catch {}
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("blur", handleWindowBlur);
+      if (blurTimeout) clearTimeout(blurTimeout);
+    };
+  }, []);
+
   // Format seconds to mm:ss or hh:mm:ss
   const formatTime = (timeInSec: number) => {
     if (isNaN(timeInSec) || !isFinite(timeInSec)) return "00:00";
