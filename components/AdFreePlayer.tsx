@@ -969,10 +969,9 @@ export default function AdFreePlayer({
         <iframe
           src={activeEmbedUrl}
           className="w-full h-full border-0 bg-black"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope"
           allowFullScreen
           referrerPolicy="origin"
-          sandbox="allow-forms allow-scripts allow-same-origin allow-presentation allow-top-navigation-by-user-activation"
           title={title || "CineStream Player"}
         />
       </div>
