@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { encryptStreamUrl, decryptStreamUrl } from "@/lib/stream-crypto";
+import http2 from "node:http2";
+import { Readable } from "node:stream";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -78,6 +80,192 @@ function getTargetReferer(targetUrl: string, existingReferer?: string): string {
   return existingReferer || "https://videodownloader.site/";
 }
 
+interface UpstreamResponse {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Headers;
+  body: ReadableStream<Uint8Array> | null;
+  text: () => Promise<string>;
+}
+
+// Connection pool for HTTP/2 sessions to minimize handshake latency across range chunks
+const http2Sessions = new Map<string, http2.ClientHttp2Session>();
+
+function getHttp2Session(origin: string): http2.ClientHttp2Session {
+  let session = http2Sessions.get(origin);
+  if (!session || session.destroyed || session.closed) {
+    session = http2.connect(origin);
+    session.on("error", () => {
+      try { session?.destroy(); } catch {}
+      http2Sessions.delete(origin);
+    });
+    session.on("close", () => {
+      http2Sessions.delete(origin);
+    });
+    http2Sessions.set(origin, session);
+  }
+  return session;
+}
+
+/**
+ * Native HTTP/2 client for upstream CDN endpoints that require ALPN h2 (e.g. Alibaba Cloud CDN / Tengine)
+ * and reject HTTP/1.1 from cloud datacenter IPs with 426 Upgrade Required.
+ */
+async function fetchHttp2(
+  targetUrl: string,
+  headers: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<UpstreamResponse> {
+  const parsed = new URL(targetUrl);
+  const session = getHttp2Session(parsed.origin);
+
+  return new Promise((resolve, reject) => {
+    let req: http2.ClientHttp2Stream;
+
+    const reqHeaders: http2.OutgoingHttpHeaders = {
+      ":method": "GET",
+      ":path": parsed.pathname + parsed.search,
+      ":authority": parsed.host,
+      ":scheme": parsed.protocol.replace(":", ""),
+    };
+
+    for (const [key, value] of Object.entries(headers)) {
+      const lower = key.toLowerCase();
+      // Filter out HTTP/1.1-specific connection headers not allowed in HTTP/2
+      if (
+        !lower.startsWith(":") &&
+        lower !== "host" &&
+        lower !== "connection" &&
+        lower !== "keep-alive" &&
+        lower !== "upgrade"
+      ) {
+        reqHeaders[lower] = value;
+      }
+    }
+
+    try {
+      req = session.request(reqHeaders);
+    } catch {
+      // If session failed, clear and retry once with fresh session
+      http2Sessions.delete(parsed.origin);
+      const freshSession = getHttp2Session(parsed.origin);
+      req = freshSession.request(reqHeaders);
+    }
+
+    let resolved = false;
+
+    if (signal) {
+      if (signal.aborted) {
+        try { req.close(http2.constants.NGHTTP2_CANCEL); } catch {}
+        return reject(new DOMException("Aborted", "AbortError"));
+      }
+      signal.addEventListener(
+        "abort",
+        () => {
+          try { req.close(http2.constants.NGHTTP2_CANCEL); } catch {}
+        },
+        { once: true },
+      );
+    }
+
+    req.on("error", (err) => {
+      if (!resolved) {
+        reject(err);
+      }
+    });
+
+    req.on("response", (resHeaders) => {
+      resolved = true;
+      const status = (resHeaders[":status"] as number) || 200;
+      const responseHeaders = new Headers();
+
+      for (const [k, v] of Object.entries(resHeaders)) {
+        if (!k.startsWith(":")) {
+          if (Array.isArray(v)) {
+            v.forEach((val) => responseHeaders.append(k, val));
+          } else if (v !== undefined) {
+            responseHeaders.set(k, String(v));
+          }
+        }
+      }
+
+      const webStream = Readable.toWeb(req) as ReadableStream<Uint8Array>;
+
+      resolve({
+        ok: status >= 200 && status < 300,
+        status,
+        statusText:
+          status === 206
+            ? "Partial Content"
+            : status === 200
+            ? "OK"
+            : `Status ${status}`,
+        headers: responseHeaders,
+        body: webStream,
+        text: async () => {
+          return new Response(webStream).text();
+        },
+      });
+    });
+  });
+}
+
+/**
+ * Intelligent upstream dispatcher: uses HTTP/2 for CDNs enforcing h2 protocol upgrades
+ * and automatically upgrades to HTTP/2 if upstream responds with 426 Upgrade Required.
+ */
+async function fetchUpstream(
+  targetUrl: string,
+  requestHeaders: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<UpstreamResponse> {
+  const isHttps = targetUrl.startsWith("https://");
+  const isAlibabaCdn =
+    targetUrl.includes("hakunaymatata.com") ||
+    targetUrl.includes("bcdnxw");
+
+  // Proactively use HTTP/2 for Alibaba Cloud CDN nodes (which enforce HTTP/2 from cloud datacenters)
+  if (isHttps && isAlibabaCdn) {
+    try {
+      return await fetchHttp2(targetUrl, requestHeaders, signal);
+    } catch (h2Err) {
+      console.warn("HTTP/2 initial fetch failed, falling back to standard fetch:", h2Err);
+    }
+  }
+
+  // Standard fetch for other upstream servers
+  const controller = new AbortController();
+  const connectTimeout = setTimeout(() => controller.abort(), 30000);
+  if (signal) {
+    signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  try {
+    const res = await fetch(targetUrl, {
+      headers: requestHeaders,
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    // If server demands HTTP protocol upgrade (426 Upgrade Required), immediately upgrade to HTTP/2
+    if (res.status === 426 && isHttps) {
+      return await fetchHttp2(targetUrl, requestHeaders, signal);
+    }
+
+    return {
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+      body: res.body,
+      text: () => res.text(),
+    };
+  } finally {
+    clearTimeout(connectTimeout);
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("d") || searchParams.get("token");
@@ -123,18 +311,12 @@ export async function GET(request: NextRequest) {
   targetUrl = sanitizedTargetUrl;
 
   try {
-    let targetHost = "";
-    try {
-      targetHost = new URL(targetUrl).hostname;
-    } catch {}
-
     const requestHeaders: Record<string, string> = {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       Accept: "*/*",
       "Accept-Language": "en-US,en;q=0.9",
       Referer: resolvedReferer,
-      ...(targetHost ? { Host: targetHost } : {}),
     };
 
     const clientRange = request.headers.get("range");
@@ -142,24 +324,11 @@ export async function GET(request: NextRequest) {
       requestHeaders["Range"] = clientRange;
     }
 
-    const controller = new AbortController();
-    const connectTimeout = setTimeout(() => controller.abort(), 30000);
-
-    // Forward client abort signal so browser scrubbing cleans up cleanly
-    if (request.signal) {
-      request.signal.addEventListener("abort", () => controller.abort(), { once: true });
-    }
-
-    let upstreamRes: Response;
-    try {
-      upstreamRes = await fetch(targetUrl, {
-        headers: requestHeaders,
-        signal: controller.signal,
-      });
-    } finally {
-      // Clear connect timeout immediately once headers are received so active video transfers don't get aborted!
-      clearTimeout(connectTimeout);
-    }
+    const upstreamRes = await fetchUpstream(
+      targetUrl,
+      requestHeaders,
+      request.signal,
+    );
 
     if (!upstreamRes.ok && upstreamRes.status !== 206) {
       return new NextResponse(`Upstream error: ${upstreamRes.statusText}`, {
@@ -289,6 +458,8 @@ export async function GET(request: NextRequest) {
     });
   }
 }
+
+export const HEAD = GET;
 
 export async function OPTIONS() {
   return new NextResponse(null, {
