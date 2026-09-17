@@ -447,8 +447,9 @@ export default function AdFreePlayer({
 
           // Auto-select requested language or saved preference or English if available
           const savedPref = getPreferredAudioLanguage();
-          const targetLang = initialAudioLang || savedPref;
+          const targetLang = initialAudioLang || savedPref || "English";
           let chosenIdx = -1;
+
           if (targetLang) {
             chosenIdx = hls.audioTracks.findIndex((t) =>
               isLanguageMatch(targetLang, {
@@ -457,19 +458,26 @@ export default function AdFreePlayer({
               })
             );
           }
+
+          // If target language not found, prioritize English explicitly
           if (chosenIdx === -1) {
             chosenIdx = hls.audioTracks.findIndex(
               (t) =>
-                t.default ||
                 t.lang?.toLowerCase().startsWith("en") ||
                 t.name?.toLowerCase().includes("english")
             );
           }
-          if (chosenIdx !== -1 && hls.audioTrack !== chosenIdx) {
+
+          // Fallback to default or first track only if English is completely absent
+          if (chosenIdx === -1) {
+            chosenIdx = hls.audioTracks.findIndex((t) => t.default);
+          }
+
+          if (chosenIdx >= 0) {
             hls.audioTrack = chosenIdx;
             setActiveAudioTrack(chosenIdx);
           } else {
-            setActiveAudioTrack(hls.audioTrack >= 0 ? hls.audioTrack : 0);
+            setActiveAudioTrack(0);
           }
         } else if (audioTracks && audioTracks.length > 0) {
           setParsedAudioTracks(
@@ -494,7 +502,26 @@ export default function AdFreePlayer({
             };
           });
           setParsedAudioTracks(tracks);
-          if (typeof hls.audioTrack === "number" && hls.audioTrack >= 0) {
+
+          const savedPref = getPreferredAudioLanguage();
+          const targetLang = initialAudioLang || savedPref || "English";
+          let targetIdx = -1;
+          if (targetLang) {
+            targetIdx = data.audioTracks.findIndex((t) =>
+              isLanguageMatch(targetLang, { lang: t.lang, name: t.name })
+            );
+          }
+          if (targetIdx === -1) {
+            targetIdx = data.audioTracks.findIndex(
+              (t) =>
+                t.lang?.toLowerCase().startsWith("en") ||
+                t.name?.toLowerCase().includes("english")
+            );
+          }
+          if (targetIdx >= 0 && hls.audioTrack !== targetIdx) {
+            hls.audioTrack = targetIdx;
+            setActiveAudioTrack(targetIdx);
+          } else if (typeof hls.audioTrack === "number" && hls.audioTrack >= 0) {
             setActiveAudioTrack(hls.audioTrack);
           }
         }
@@ -678,13 +705,6 @@ export default function AdFreePlayer({
     }
     if (hlsRef.current && index >= 0 && index < hlsRef.current.audioTracks.length) {
       hlsRef.current.audioTrack = index;
-    }
-    const video = videoRef.current;
-    if (video && (video as any).audioTracks && (video as any).audioTracks.length > index) {
-      const aTracks = (video as any).audioTracks;
-      for (let i = 0; i < aTracks.length; i++) {
-        aTracks[i].enabled = i === index;
-      }
     }
     setActiveMenu("none");
     triggerShowControls();

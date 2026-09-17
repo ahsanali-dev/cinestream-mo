@@ -42,7 +42,6 @@ export async function GET(request: NextRequest) {
     season,
     episode,
     server,
-    lang,
   );
 
   try {
@@ -84,20 +83,17 @@ export async function GET(request: NextRequest) {
     }
 
     const isMp4 = Boolean(
-      streamData.masterPlaylistUrl.includes(".mp4") &&
-        !streamData.masterPlaylistUrl.includes(".m3u8")
+      streamData.masterPlaylistUrl.includes(".mp4") ||
+        streamData.provider?.toLowerCase().includes("netmirror"),
     );
-
 
     const encryptedMasterToken = encryptStreamUrl(
       streamData.masterPlaylistUrl,
       streamData.referer,
     );
-    const langSuffix = lang ? `&lang=${encodeURIComponent(lang)}` : "";
-    const finalStreamUrl = `/api/stream/proxy?d=${encryptedMasterToken}${langSuffix}`;
 
     // All streams route through proxy to inject correct upstream Referer headers
-
+    const finalStreamUrl = `/api/stream/proxy?d=${encryptedMasterToken}`;
 
     const proxiedSubtitles = streamData.subtitles.map((sub) => ({
       ...sub,

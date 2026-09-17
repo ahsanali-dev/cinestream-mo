@@ -232,6 +232,7 @@ export default function PlayerContainer({
           season: selectedSeason.toString(),
           episode: selectedEpisode.toString(),
           server: selectedServer,
+          lang: selectedLanguage,
           origLang: originalLanguage || spokenLanguages?.[0]?.iso_639_1 || "en",
         });
 
@@ -293,7 +294,7 @@ export default function PlayerContainer({
     return () => {
       isMounted = false;
     };
-  }, [id, type, selectedSeason, selectedEpisode, selectedServer, retryCount]);
+  }, [id, type, selectedSeason, selectedEpisode, selectedServer, selectedLanguage, retryCount]);
 
   const currentSeasonInfo = activeSeasons.find(
     (s) => s.season_number === selectedSeason

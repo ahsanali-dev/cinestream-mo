@@ -62,10 +62,18 @@ export const maxDuration = 60;
  */
 function getTargetReferer(targetUrl: string, existingReferer?: string): string {
   if (
+    targetUrl.includes("freecdn4.top") ||
+    targetUrl.includes("nfmirrorcdn") ||
+    targetUrl.includes("imgcdn.kim") ||
+    targetUrl.includes("net52.cc") ||
+    targetUrl.includes("net27.cc") ||
+    targetUrl.includes("net77.cc")
+  ) {
+    return "https://net52.cc/";
+  }
+  if (
     targetUrl.includes("hakunaymatata.com") ||
     targetUrl.includes("bcdnxw") ||
-    targetUrl.includes("net27.cc") ||
-    targetUrl.includes("net77.cc") ||
     targetUrl.includes("videodownloader")
   ) {
     return "https://videodownloader.site/";
@@ -77,7 +85,7 @@ function getTargetReferer(targetUrl: string, existingReferer?: string): string {
   ) {
     return "https://vixsrc.to/";
   }
-  return existingReferer || "https://videodownloader.site/";
+  return existingReferer || "https://net52.cc/";
 }
 
 interface UpstreamResponse {
@@ -347,25 +355,44 @@ export async function GET(request: NextRequest) {
       const originalText = await upstreamRes.text();
       const lines = originalText.split("\n");
       const rewrittenLines: string[] = [];
+      const requestedLang = (searchParams.get("lang") || "").toLowerCase();
+      const wantsHindi = requestedLang.includes("hin") || requestedLang === "hi";
+
+      const hasHindiAudio = lines.some(
+        (l) => l.includes("TYPE=AUDIO") && (l.toLowerCase().includes('name="hindi"') || l.toLowerCase().includes('language="hin"'))
+      );
+      const hasEnglishAudio = lines.some(
+        (l) => l.includes("TYPE=AUDIO") && (l.toLowerCase().includes('name="english"') || l.toLowerCase().includes('language="eng"'))
+      );
 
       for (let line of lines) {
         line = line.trim();
         if (!line) continue;
 
-        // Skip broken dummy audio media tags from NetMirror (e.g., https:///files/108978/a/0/0.m3u8 or 1. Unknown)
-        if (
-          line.includes("TYPE=AUDIO") &&
-          (line.includes("///files") ||
-            line.includes("NAME=\"1. Unknown\"") ||
-            line.includes("LANGUAGE=\"und\""))
-        ) {
-          continue;
-        }
+        // Smart Audio Normalization: promote requested language (Hindi or English) to DEFAULT=YES
+        if (line.includes("TYPE=AUDIO")) {
+          const isHindi = line.toLowerCase().includes('name="hindi"') || line.toLowerCase().includes('language="hin"');
+          const isEng = line.toLowerCase().includes('name="english"') || line.toLowerCase().includes('language="eng"');
 
+          if (wantsHindi && hasHindiAudio) {
+            if (isHindi) {
+              line = line.replace(/DEFAULT=NO/gi, 'DEFAULT=YES').replace(/AUTOSELECT=NO/gi, 'AUTOSELECT=YES');
+            } else {
+              line = line.replace(/DEFAULT=YES/gi, 'DEFAULT=NO').replace(/AUTOSELECT=YES/gi, 'AUTOSELECT=NO');
+            }
+          } else if (hasEnglishAudio) {
+            if (isEng) {
+              line = line.replace(/DEFAULT=NO/gi, 'DEFAULT=YES').replace(/AUTOSELECT=NO/gi, 'AUTOSELECT=YES');
+            } else {
+              line = line.replace(/DEFAULT=YES/gi, 'DEFAULT=NO').replace(/AUTOSELECT=YES/gi, 'AUTOSELECT=NO');
+            }
+          }
+        }
         if (line.startsWith("#")) {
           // If STREAM-INF references dummy audio group that was removed, strip AUDIO attribute
-          if (line.startsWith("#EXT-X-STREAM-INF:") && (line.includes('AUDIO="aac"') || line.includes('AUDIO="und"'))) {
-            line = line.replace(/,AUDIO="[^"]+"/g, "").replace(/AUDIO="[^"]+",/g, "");
+          // Preserve genuine AUDIO="aac" so Hls.js loads Hindi/English tracks from NetMirror
+          if (line.startsWith("#EXT-X-STREAM-INF:") && line.includes('AUDIO="und"')) {
+            line = line.replace(/,AUDIO="und"/g, "").replace(/AUDIO="und",/g, "");
           }
 
           // Rewrite URI attributes in tags like #EXT-X-MEDIA:TYPE=AUDIO/SUBTITLES and #EXT-X-KEY
@@ -409,14 +436,23 @@ export async function GET(request: NextRequest) {
 
     // Binary video segments (.ts, .jpg, .mp4) or subtitles (.vtt)
     const headers = new Headers();
+    // NetMirror audio segments are named .js and video segments are named .jpg - both are MPEG-TS
+    const isMpegTs =
+      targetUrl.includes("freecdn4.top") ||
+      targetUrl.includes("/files/") ||
+      targetUrl.endsWith(".ts") ||
+      targetUrl.endsWith(".js") ||
+      (targetUrl.endsWith(".jpg") && targetUrl.includes("/files/"));
+
     headers.set(
       "Content-Type",
-      contentType ||
-        (targetUrl.endsWith(".vtt")
-          ? "text/vtt"
-          : targetUrl.includes(".mp4")
-          ? "video/mp4"
-          : "video/mp2t"),
+      isMpegTs
+        ? "video/mp2t"
+        : targetUrl.endsWith(".vtt")
+        ? "text/vtt"
+        : targetUrl.includes(".mp4")
+        ? "video/mp4"
+        : contentType || "video/mp2t",
     );
     headers.set("Access-Control-Allow-Origin", "*");
     headers.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
