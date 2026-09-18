@@ -167,7 +167,7 @@ export const AVAILABLE_SERVERS: ServerOption[] = [
   },
   {
     id: "server5",
-    name: "Server 5 (Global VIP Backup)",
+    name: "Server 5 (AnyEmbed VIP Backup)",
     badge: "VIP Stream",
     description: "Alternative direct unblocked stream",
   },
@@ -223,10 +223,10 @@ export function getEmbedFallbackUrl(
         : `https://www.2embed.cc/embedtv/${cleanId}&s=${season}&e=${episode}`;
 
     case "server5":
-      // Vidsrc VIP / Multi-Cloud
+      // AnyEmbed / SmashyStream
       return type === "movie"
-        ? `https://vidsrc.xyz/embed/movie/${cleanId}`
-        : `https://vidsrc.xyz/embed/tv/${cleanId}/${season}/${episode}`;
+        ? `https://anyembed.xyz/embed/tmdb-movie-${cleanId}`
+        : `https://anyembed.xyz/embed/tmdb-tv-${cleanId}/${season}/${episode}`;
 
     default:
       return type === "movie"
@@ -444,6 +444,7 @@ async function extractNetMirrorEmbed(
           const rawLabel = line.match(/NAME=["']([^"']+)["']/i)?.[1] || "Audio";
           const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
           const info = resolveLanguageInfo(rawLang, rawLabel);
+          if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
           audioTracks.push({
             label: info.name,
             lang: info.code,
@@ -588,6 +589,7 @@ async function extractVixSrcHLS(
           const isDefault = line.includes("DEFAULT=YES");
           const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
           const info = resolveLanguageInfo(rawLang, rawLabel);
+          if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
           audioTracks.push({
             label: info.name,
             lang: info.code,
@@ -749,6 +751,20 @@ export async function probeAllServerLanguages(
         isDefault: false,
       });
     }
+  }
+
+  // Multi-Audio / Hindi Dubbed fallback via Server 2 (MultiEmbed) if not natively present
+  if (!seenKeys.has("hindi")) {
+    addTrack({
+      id: "s2_hin_dub",
+      name: "Hindi",
+      code: "HIN",
+      serverId: "server2",
+      serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
+      serverBadge: "Hindi Dubbed HD",
+      provider: "CineStream Multi-Audio Cloud",
+      isDefault: false,
+    });
   }
 
   // Genuine Original Hindi audio handling (e.g. Bollywood/Indian content)
@@ -948,6 +964,7 @@ export async function extractDirectStream(
   if (netData && netData.audioTracks && netData.audioTracks.length > 0) {
     for (const nTrack of netData.audioTracks) {
       if (!nTrack.url) continue;
+      if (nTrack.lang.toUpperCase() === "UND" || nTrack.label.toLowerCase() === "unknown") continue;
       const isAlreadyInVix = vixData?.audioTracks.some(
         (vt) =>
           vt.label.toLowerCase() === nTrack.label.toLowerCase() ||
@@ -974,16 +991,25 @@ export async function extractDirectStream(
   let chosenStream: StreamData | null = null;
   const isNetMirrorBumper = Boolean(netData?.isAbuseVideo);
 
-  // Scenario 1: User requested Server 2 (NetMirror)
+  // Handle explicit cloud embed server requests (Server 3, Server 4, Server 5)
+  if (serverId === "server3" || serverId === "server4" || serverId === "server5") {
+    return null;
+  }
+
+  // Scenario 1: User requested Server 2 (Multi-Audio & Hindi Dubbed HD)
   if (serverId === "server2" || serverId === "netmirror") {
     if (netData && !isNetMirrorBumper) {
       chosenStream = { ...netData };
-    } else if (vixData) {
-      // NetMirror video is bumper: fuse VixSrc 1080p video with NetMirror audio
+    } else if (extraAudioList.length > 0 && vixData) {
+      // NetMirror genuine audio fused with clean 1080p VixSrc video
       chosenStream = {
         ...vixData,
-        provider: "NetMirror Ultra Cloud HD",
+        provider: "CineStream Multi-Audio HD",
+        extraAudio: extraAudioList,
       };
+    } else {
+      // Fallback to Server 2 MultiEmbed
+      return null;
     }
   }
 
@@ -1027,6 +1053,7 @@ export async function extractDirectStream(
       );
 
       for (const ea of extraAudioList) {
+        if (ea.lang.toUpperCase() === "UND" || ea.label.toLowerCase() === "unknown") continue;
         if (!existingLangs.has(ea.label.toLowerCase())) {
           existingLangs.add(ea.label.toLowerCase());
           const isThisHindi =

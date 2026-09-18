@@ -108,7 +108,12 @@ export async function GET(request: NextRequest) {
       url: `/api/stream/proxy?d=${encryptStreamUrl(sub.url, streamData.referer)}`,
     }));
 
-    const proxiedAudioTracks = streamData.audioTracks.map((audio) => {
+    const validAudioTracks = streamData.audioTracks.filter(
+      (audio) =>
+        audio.lang.toUpperCase() !== "UND" &&
+        audio.label.toLowerCase() !== "unknown"
+    );
+    const proxiedAudioTracks = validAudioTracks.map((audio) => {
       const matchingExtra = streamData.extraAudio?.find(
         (ea) =>
           ea.url === audio.url ||
