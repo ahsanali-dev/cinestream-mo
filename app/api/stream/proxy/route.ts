@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { encryptStreamUrl, decryptStreamUrl } from "@/lib/stream-crypto";
+import {
+  encryptStreamUrl,
+  decryptStreamUrl,
+  ExtraAudioTrack,
+} from "@/lib/stream-crypto";
 import http2 from "node:http2";
 import { Readable } from "node:stream";
 
@@ -62,7 +66,8 @@ export const maxDuration = 60;
  */
 function getTargetReferer(targetUrl: string, existingReferer?: string): string {
   if (
-    targetUrl.includes("freecdn4.top") ||
+    targetUrl.includes("freecdn") ||
+    targetUrl.includes("nm-cdn") ||
     targetUrl.includes("nfmirrorcdn") ||
     targetUrl.includes("imgcdn.kim") ||
     targetUrl.includes("net52.cc") ||
@@ -280,6 +285,7 @@ export async function GET(request: NextRequest) {
 
   let targetUrl: string | null = null;
   let referer: string | undefined = undefined;
+  let extraAudio: ExtraAudioTrack[] | undefined = undefined;
 
   if (token) {
     const decrypted = decryptStreamUrl(token);
@@ -292,6 +298,9 @@ export async function GET(request: NextRequest) {
     targetUrl = decrypted.url;
     if (decrypted.referer) {
       referer = decrypted.referer;
+    }
+    if (decrypted.extraAudio && decrypted.extraAudio.length > 0) {
+      extraAudio = decrypted.extraAudio;
     }
   } else if (searchParams.get("url")) {
     targetUrl = searchParams.get("url");
@@ -358,12 +367,71 @@ export async function GET(request: NextRequest) {
       const requestedLang = (searchParams.get("lang") || "").toLowerCase();
       const wantsHindi = requestedLang.includes("hin") || requestedLang === "hi";
 
+      const isMasterPlaylist = lines.some((l) => l.includes("#EXT-X-STREAM-INF"));
+
+      // Detect audio GROUP-ID from existing audio or stream-inf tags
+      let audioGroupId = "audio";
+      for (const line of lines) {
+        const audioMatch = line.match(/TYPE=AUDIO.*GROUP-ID=["']?([^"',\s]+)["']?/i);
+        if (audioMatch && audioMatch[1]) {
+          audioGroupId = audioMatch[1];
+          break;
+        }
+        const infMatch = line.match(/#EXT-X-STREAM-INF:.*AUDIO=["']?([^"',\s]+)["']?/i);
+        if (infMatch && infMatch[1]) {
+          audioGroupId = infMatch[1];
+          break;
+        }
+      }
+
       const hasHindiAudio = lines.some(
-        (l) => l.includes("TYPE=AUDIO") && (l.toLowerCase().includes('name="hindi"') || l.toLowerCase().includes('language="hin"'))
+        (l) =>
+          l.includes("TYPE=AUDIO") &&
+          (l.toLowerCase().includes('name="hindi"') ||
+            l.toLowerCase().includes('language="hin"')),
       );
       const hasEnglishAudio = lines.some(
-        (l) => l.includes("TYPE=AUDIO") && (l.toLowerCase().includes('name="english"') || l.toLowerCase().includes('language="eng"'))
+        (l) =>
+          l.includes("TYPE=AUDIO") &&
+          (l.toLowerCase().includes('name="english"') ||
+            l.toLowerCase().includes('language="eng"')),
       );
+
+      // If master playlist, prepare any extra audio dub tracks (e.g. NetMirror Hindi)
+      const extraAudioTags: string[] = [];
+      if (isMasterPlaylist && extraAudio && extraAudio.length > 0) {
+        for (const extraTrack of extraAudio) {
+          const trackLabelLower = extraTrack.label.toLowerCase();
+          const trackLangLower = extraTrack.lang.toLowerCase();
+
+          // Avoid duplication if the playlist already natively includes this audio track
+          const alreadyInManifest = lines.some(
+            (l) =>
+              l.includes("TYPE=AUDIO") &&
+              (l.toLowerCase().includes(`name="${trackLabelLower}"`) ||
+                l.toLowerCase().includes(`language="${trackLangLower}"`)),
+          );
+          if (alreadyInManifest) continue;
+
+          const isThisHindi =
+            trackLangLower.includes("hin") || trackLabelLower.includes("hindi");
+
+          const audioToken = encryptStreamUrl(
+            extraTrack.url,
+            extraTrack.referer || referer,
+          );
+          const defaultStr =
+            wantsHindi && isThisHindi
+              ? 'DEFAULT=YES,AUTOSELECT=YES'
+              : 'DEFAULT=NO,AUTOSELECT=NO';
+
+          extraAudioTags.push(
+            `#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="${audioGroupId}",NAME="${extraTrack.label}",${defaultStr},FORCED=NO,LANGUAGE="${extraTrack.lang}",URI="/api/stream/proxy?d=${audioToken}"`,
+          );
+        }
+      }
+
+      let extraAudioInjected = false;
 
       for (let line of lines) {
         line = line.trim();
@@ -371,23 +439,48 @@ export async function GET(request: NextRequest) {
 
         // Smart Audio Normalization: promote requested language (Hindi or English) to DEFAULT=YES
         if (line.includes("TYPE=AUDIO")) {
-          const isHindi = line.toLowerCase().includes('name="hindi"') || line.toLowerCase().includes('language="hin"');
-          const isEng = line.toLowerCase().includes('name="english"') || line.toLowerCase().includes('language="eng"');
+          const isHindi =
+            line.toLowerCase().includes('name="hindi"') ||
+            line.toLowerCase().includes('language="hin"');
+          const isEng =
+            line.toLowerCase().includes('name="english"') ||
+            line.toLowerCase().includes('language="eng"');
 
-          if (wantsHindi && hasHindiAudio) {
+          if (wantsHindi) {
             if (isHindi) {
-              line = line.replace(/DEFAULT=NO/gi, 'DEFAULT=YES').replace(/AUTOSELECT=NO/gi, 'AUTOSELECT=YES');
+              line = line
+                .replace(/DEFAULT=NO/gi, 'DEFAULT=YES')
+                .replace(/AUTOSELECT=NO/gi, 'AUTOSELECT=YES');
             } else {
-              line = line.replace(/DEFAULT=YES/gi, 'DEFAULT=NO').replace(/AUTOSELECT=YES/gi, 'AUTOSELECT=NO');
+              line = line
+                .replace(/DEFAULT=YES/gi, 'DEFAULT=NO')
+                .replace(/AUTOSELECT=YES/gi, 'AUTOSELECT=NO');
             }
           } else if (hasEnglishAudio) {
             if (isEng) {
-              line = line.replace(/DEFAULT=NO/gi, 'DEFAULT=YES').replace(/AUTOSELECT=NO/gi, 'AUTOSELECT=YES');
+              line = line
+                .replace(/DEFAULT=NO/gi, 'DEFAULT=YES')
+                .replace(/AUTOSELECT=NO/gi, 'AUTOSELECT=YES');
             } else {
-              line = line.replace(/DEFAULT=YES/gi, 'DEFAULT=NO').replace(/AUTOSELECT=YES/gi, 'AUTOSELECT=NO');
+              line = line
+                .replace(/DEFAULT=YES/gi, 'DEFAULT=NO')
+                .replace(/AUTOSELECT=YES/gi, 'AUTOSELECT=NO');
             }
           }
         }
+
+        // Before first #EXT-X-STREAM-INF, inject extra audio tags
+        if (
+          line.startsWith("#EXT-X-STREAM-INF:") &&
+          !extraAudioInjected &&
+          extraAudioTags.length > 0
+        ) {
+          for (const extraTag of extraAudioTags) {
+            rewrittenLines.push(extraTag);
+          }
+          extraAudioInjected = true;
+        }
+
         if (line.startsWith("#")) {
           // If STREAM-INF references dummy audio group that was removed, strip AUDIO attribute
           // Preserve genuine AUDIO="aac" so Hls.js loads Hindi/English tracks from NetMirror
@@ -399,7 +492,9 @@ export async function GET(request: NextRequest) {
           const rewrittenTag = line.replace(
             /URI=["']([^"']+)["']/g,
             (_match, uri) => {
-              const fullUri = sanitizeTargetUrl(uri, targetUrl!) || (uri.startsWith("http") ? uri : new URL(uri, targetUrl!).href);
+              const fullUri =
+                sanitizeTargetUrl(uri, targetUrl!) ||
+                (uri.startsWith("http") ? uri : new URL(uri, targetUrl!).href);
               const encryptedToken = encryptStreamUrl(fullUri, referer);
               return `URI="/api/stream/proxy?d=${encryptedToken}"`;
             },
@@ -408,9 +503,11 @@ export async function GET(request: NextRequest) {
         } else {
           // Check if line is a child playlist or direct video segment
           const isChildPlaylist = line.includes(".m3u8") || line.includes("/playlist");
-          
+
           if (isChildPlaylist) {
-            const fullChildUrl = sanitizeTargetUrl(line, targetUrl) || (line.startsWith("http") ? line : new URL(line, targetUrl).href);
+            const fullChildUrl =
+              sanitizeTargetUrl(line, targetUrl) ||
+              (line.startsWith("http") ? line : new URL(line, targetUrl).href);
             const encryptedToken = encryptStreamUrl(fullChildUrl, referer);
             rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
           } else if (line.startsWith("http://") || line.startsWith("https://")) {
@@ -418,10 +515,18 @@ export async function GET(request: NextRequest) {
             rewrittenLines.push(line);
           } else {
             // Relative segment (.ts / .jpg)
-            const fullSegmentUrl = sanitizeTargetUrl(line, targetUrl) || new URL(line, targetUrl).href;
+            const fullSegmentUrl =
+              sanitizeTargetUrl(line, targetUrl) || new URL(line, targetUrl).href;
             const encryptedToken = encryptStreamUrl(fullSegmentUrl, referer);
             rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
           }
+        }
+      }
+
+      // If no #EXT-X-STREAM-INF was reached (fallback), append extra audio tags
+      if (!extraAudioInjected && extraAudioTags.length > 0) {
+        for (const extraTag of extraAudioTags) {
+          rewrittenLines.push(extraTag);
         }
       }
 
@@ -438,7 +543,8 @@ export async function GET(request: NextRequest) {
     const headers = new Headers();
     // NetMirror audio segments are named .js and video segments are named .jpg - both are MPEG-TS
     const isMpegTs =
-      targetUrl.includes("freecdn4.top") ||
+      targetUrl.includes("freecdn") ||
+      targetUrl.includes("nm-cdn") ||
       targetUrl.includes("/files/") ||
       targetUrl.endsWith(".ts") ||
       targetUrl.endsWith(".js") ||

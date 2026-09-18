@@ -431,9 +431,6 @@ export default function PlayerContainer({
       );
       if (match) {
         setSelectedLanguage(match.name);
-        if (match.serverId && match.serverId !== selectedServer) {
-          setSelectedServer(match.serverId);
-        }
         return;
       }
     }
@@ -447,9 +444,6 @@ export default function PlayerContainer({
       const defaultLang = displayLanguages.find((l) => l.isDefault) || displayLanguages[0];
       if (defaultLang) {
         setSelectedLanguage(defaultLang.name);
-        if (defaultLang.serverId && defaultLang.serverId !== selectedServer) {
-          setSelectedServer(defaultLang.serverId);
-        }
       }
     }
   }, [displayLanguages]);

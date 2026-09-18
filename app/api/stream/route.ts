@@ -92,24 +92,32 @@ export async function GET(request: NextRequest) {
     const encryptedMasterToken = encryptStreamUrl(
       streamData.masterPlaylistUrl,
       streamData.referer,
+      streamData.extraAudio,
     );
     const langSuffix = lang ? `&lang=${encodeURIComponent(lang)}` : "";
     const finalStreamUrl = `/api/stream/proxy?d=${encryptedMasterToken}${langSuffix}`;
 
     // All streams route through proxy to inject correct upstream Referer headers
-
-
     const proxiedSubtitles = streamData.subtitles.map((sub) => ({
       ...sub,
       url: `/api/stream/proxy?d=${encryptStreamUrl(sub.url, streamData.referer)}`,
     }));
 
-    const proxiedAudioTracks = streamData.audioTracks.map((audio) => ({
-      ...audio,
-      url: audio.url
-        ? `/api/stream/proxy?d=${encryptStreamUrl(audio.url, streamData.referer)}`
-        : undefined,
-    }));
+    const proxiedAudioTracks = streamData.audioTracks.map((audio) => {
+      const matchingExtra = streamData.extraAudio?.find(
+        (ea) =>
+          ea.url === audio.url ||
+          ea.label.toLowerCase() === audio.label.toLowerCase() ||
+          ea.lang === audio.lang.toLowerCase(),
+      );
+      const trackReferer = matchingExtra?.referer || streamData.referer;
+      return {
+        ...audio,
+        url: audio.url
+          ? `/api/stream/proxy?d=${encryptStreamUrl(audio.url, trackReferer)}`
+          : undefined,
+      };
+    });
 
     return NextResponse.json(
       {

@@ -12,19 +12,32 @@ const SECRET_PHRASE = process.env.STREAM_SECRET || "cinestream-vault-encrypted-m
 const SECRET_KEY = crypto.createHash("sha256").update(SECRET_PHRASE).digest();
 const IV_LENGTH = 16;
 
-export interface DecryptedStreamPayload {
+export interface ExtraAudioTrack {
+  label: string;
+  lang: string;
   url: string;
   referer?: string;
 }
 
+export interface DecryptedStreamPayload {
+  url: string;
+  referer?: string;
+  extraAudio?: ExtraAudioTrack[];
+}
+
 /**
- * Encrypts a target URL and optional referer into a secure, URL-safe base64url string.
+ * Encrypts a target URL, optional referer, and optional extra audio tracks into a secure token.
  */
-export function encryptStreamUrl(url: string, referer?: string): string {
+export function encryptStreamUrl(
+  url: string,
+  referer?: string,
+  extraAudio?: ExtraAudioTrack[],
+): string {
   try {
     const payload = JSON.stringify({
       u: url,
       r: referer || "",
+      a: extraAudio && extraAudio.length > 0 ? extraAudio : undefined,
       t: Date.now(), // timestamp prevents identical tokens
     });
 
@@ -41,7 +54,7 @@ export function encryptStreamUrl(url: string, referer?: string): string {
 }
 
 /**
- * Decrypts a secure token back into the target URL and referer.
+ * Decrypts a secure token back into the target URL, referer, and extra audio tracks.
  */
 export function decryptStreamUrl(token: string): DecryptedStreamPayload | null {
   try {
@@ -68,6 +81,7 @@ export function decryptStreamUrl(token: string): DecryptedStreamPayload | null {
     return {
       url: data.u,
       referer: data.r || undefined,
+      extraAudio: Array.isArray(data.a) ? data.a : undefined,
     };
   } catch {
     // Decryption failure (invalid or tampered token)
