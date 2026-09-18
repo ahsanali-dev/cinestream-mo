@@ -762,15 +762,34 @@ export async function probeAllServerLanguages(
     } catch {}
   }
 
-  // If no audio tracks detected, provide standard original audio option
-  if (aggregated.length === 0) {
+  // Always ensure English audio option is available
+  if (!seenKeys.has("english")) {
     addTrack({
-      id: "s1_orig_def",
-      name: defaultOrigInfo.name || "English",
-      code: defaultOrigInfo.code || "ENG",
+      id: "s1_eng_def",
+      name: "English",
+      code: "ENG",
       serverId: "server1",
       serverName: "Server 1 (CineStream Fast HD)",
       serverBadge: "Fast HD",
+      provider: "CineStream Cloud Direct",
+      isDefault: !isOriginalHindi,
+    });
+  }
+
+  // If original language is different from English and Hindi, ensure it's also present
+  if (
+    defaultOrigInfo.name &&
+    defaultOrigInfo.name.toLowerCase() !== "english" &&
+    defaultOrigInfo.name.toLowerCase() !== "hindi" &&
+    !seenKeys.has(defaultOrigInfo.name.toLowerCase())
+  ) {
+    addTrack({
+      id: `s1_orig_${defaultOrigInfo.code}`,
+      name: defaultOrigInfo.name,
+      code: defaultOrigInfo.code,
+      serverId: "server1",
+      serverName: "Server 1 (CineStream Fast HD)",
+      serverBadge: "Original Audio",
       provider: "CineStream Cloud Direct",
       isDefault: true,
     });
