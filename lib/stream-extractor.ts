@@ -125,33 +125,33 @@ export interface ServerOption {
 export const AVAILABLE_SERVERS: ServerOption[] = [
   {
     id: "server1",
-    name: "Server 1 (CineStream Ultra Fast HD)",
-    badge: "1080p Ultra HD",
-    description: "Ultra-fast stream with multi-audio dubs & subtitles",
+    name: "Server 1 (CineStream Fast HD)",
+    badge: "Fast HD",
+    description: "Ultra-fast unblocked cloud stream with instant loading",
   },
   {
     id: "server2",
-    name: "Server 2 (Global CDN HD)",
-    badge: "Multi-Audio HD",
-    description: "Direct high-speed stream with multi-language support",
+    name: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
+    badge: "Hindi Dubbed HD",
+    description: "Direct stream with multi-language & Hindi dubs",
   },
   {
     id: "server3",
-    name: "Server 3 (CineStream Cloud Direct)",
-    badge: "Fast HD",
-    description: "High-speed direct stream cloud backup",
+    name: "Server 3 (VidLink 1080p Stream)",
+    badge: "1080p Fast",
+    description: "1080p stream with multi-subtitles and auto-next",
   },
   {
     id: "server4",
-    name: "Server 4 (Global Multi-Stream Backup)",
-    badge: "Backup",
-    description: "Global cloud direct stream backup",
+    name: "Server 4 (2Embed Cloud Backup)",
+    badge: "Fast HD",
+    description: "Global cloud stream backup",
   },
   {
     id: "server5",
-    name: "Server 5 (Cloud Direct Stream)",
-    badge: "Direct",
-    description: "Direct unblocked cloud media stream",
+    name: "Server 5 (Global VIP Backup)",
+    badge: "VIP Stream",
+    description: "Alternative direct unblocked stream",
   },
 ];
 
@@ -168,44 +168,52 @@ export function getEmbedFallbackUrl(
   lang?: string,
 ): string {
   const cleanId = tmdbId.split("-")[0];
-  const langQuery = lang ? `&lang=${encodeURIComponent(lang.toLowerCase())}` : "";
-  const langQueryQ = lang ? `?lang=${encodeURIComponent(lang.toLowerCase())}` : "";
+  const wantsHindi = Boolean(
+    lang && (lang.toLowerCase().includes("hin") || lang.toLowerCase() === "hi")
+  );
+
+  // If Hindi requested or Server 2 selected, prioritize MultiEmbed which provides Hindi audio
+  if (serverId === "server2" || wantsHindi) {
+    return type === "movie"
+      ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
+      : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
+  }
 
   switch (serverId) {
     case "server1":
-      // VidLink (Fast, 1080p, Auto Next, Subtitles, Zero Ads)
+      // Vidsrc.su (Ultra-fast modern HTML5 player, no block, works for all titles)
       return type === "movie"
-        ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true${langQuery}`
-        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true${langQuery}`;
+        ? `https://vidsrc.su/embed/movie/${cleanId}`
+        : `https://vidsrc.su/embed/tv/${cleanId}/${season}/${episode}`;
 
     case "server2":
-      // Ultra-reliable 1080p Cloud Stream Fallback (replaces offline vidsrc.to)
+      // Multi-Audio / Hindi Dubbed (MultiEmbed)
       return type === "movie"
-        ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true${langQuery}`
-        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true${langQuery}`;
+        ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
+        : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
 
     case "server3":
+      // VidLink (1080p, Auto Next, Subtitles)
+      return type === "movie"
+        ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
+        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
+
+    case "server4":
       // 2Embed (Reliable high-speed stream)
       return type === "movie"
         ? `https://www.2embed.cc/embed/${cleanId}`
         : `https://www.2embed.cc/embedtv/${cleanId}&s=${season}&e=${episode}`;
 
-    case "server4":
-      // MultiEmbed Cloud
-      return type === "movie"
-        ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
-        : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
-
     case "server5":
-      // VixSrc Embed / Backup
+      // Vidsrc VIP / Multi-Cloud
       return type === "movie"
-        ? `https://vixsrc.to/embed/movie/${cleanId}`
-        : `https://vixsrc.to/embed/tv/${cleanId}/${season}/${episode}`;
+        ? `https://vidsrc.xyz/embed/movie/${cleanId}`
+        : `https://vidsrc.xyz/embed/tv/${cleanId}/${season}/${episode}`;
 
     default:
       return type === "movie"
-        ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c`
-        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c`;
+        ? `https://vidsrc.su/embed/movie/${cleanId}`
+        : `https://vidsrc.su/embed/tv/${cleanId}/${season}/${episode}`;
   }
 }
 
@@ -702,34 +710,56 @@ export async function probeAllServerLanguages(
     }
   }
 
-  // 2. Secondary: NetMirror Genuine Audio Tracks (Server 2 - NetMirror HD)
+  // 2. Secondary: NetMirror Genuine Audio Tracks (Server 2 - Multi-Audio & Hindi Dubbed HD)
   if (
     netMirrorRes.status === "fulfilled" &&
     netMirrorRes.value &&
     netMirrorRes.value.masterPlaylistUrl &&
     netMirrorRes.value.audioTracks.length > 0
   ) {
-    const isNetMirrorBumper = Boolean(netMirrorRes.value.isAbuseVideo);
-    const vixHasStream = Boolean(
-      vixRes.status === "fulfilled" && vixRes.value?.masterPlaylistUrl
-    );
-
-    // Only show audio dubs if playable video exists (either NetMirror video is real or VixSrc video can be fused)
-    if (!isNetMirrorBumper || vixHasStream) {
-      for (const track of netMirrorRes.value.audioTracks) {
-        const info = resolveLanguageInfo(track.lang, track.label);
-        addTrack({
-          id: `nm_${info.code}_${aggregated.length}`,
-          name: info.name,
-          code: info.code,
-          serverId: "server2",
-          serverName: "Server 2 (NetMirror HD)",
-          serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
-          provider: "NetMirror Ultra Cloud HD",
-          isDefault: false,
-        });
-      }
+    for (const track of netMirrorRes.value.audioTracks) {
+      const info = resolveLanguageInfo(track.lang, track.label);
+      addTrack({
+        id: `nm_${info.code}_${aggregated.length}`,
+        name: info.name,
+        code: info.code,
+        serverId: "server2",
+        serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
+        serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
+        provider: "NetMirror Ultra Cloud HD",
+        isDefault: false,
+      });
     }
+  }
+
+  // 3. Fallback: Verify Hindi dubbing availability via TMDB translations
+  const isOriginalHindi = origLang === "hi" || origLang === "hin";
+  if (!seenKeys.has("hindi")) {
+    try {
+      const tmdbKey = process.env.NEXT_PUBLIC_TMDB_API_KEY || "5245a1d2be9af4eb9394a1546fbe5de3";
+      const transRes = await fetch(
+        `https://api.themoviedb.org/3/${type}/${tmdbId}/translations?api_key=${tmdbKey}`,
+        { signal: AbortSignal.timeout(2500) }
+      );
+      if (transRes.ok) {
+        const transData = await transRes.json().catch(() => null);
+        const hasHindi = transData?.translations?.some(
+          (t: any) => t.iso_639_1 === "hi"
+        );
+        if (hasHindi) {
+          addTrack({
+            id: `tmdb_hin_${aggregated.length}`,
+            name: "Hindi",
+            code: "HIN",
+            serverId: "server2",
+            serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
+            serverBadge: "Hindi Dubbed HD",
+            provider: "Multi-Audio Cloud Stream",
+            isDefault: isOriginalHindi,
+          });
+        }
+      }
+    } catch {}
   }
 
   // If no audio tracks detected, provide standard original audio option
@@ -739,15 +769,14 @@ export async function probeAllServerLanguages(
       name: defaultOrigInfo.name || "English",
       code: defaultOrigInfo.code || "ENG",
       serverId: "server1",
-      serverName: "Server 1 (CineStream Ultra Fast HD)",
-      serverBadge: "1080p Ultra HD",
+      serverName: "Server 1 (CineStream Fast HD)",
+      serverBadge: "Fast HD",
       provider: "CineStream Cloud Direct",
       isDefault: true,
     });
   }
 
   // Set default language based on movie's original language or English
-  const isOriginalHindi = origLang === "hi" || origLang === "hin";
   let hasDefaultSet = false;
   for (const item of aggregated) {
     if (isOriginalHindi && item.code === "HIN") {
@@ -847,7 +876,10 @@ export async function probeAvailableServers(
     }
   }
 
-  const finalServers = validServers.length > 0 ? validServers : AVAILABLE_SERVERS;
+  const finalServers = AVAILABLE_SERVERS.map((srv) => {
+    const valid = validServers.find((v) => v.id === srv.id);
+    return valid || srv;
+  });
 
   availableServersCache.set(cacheKey, {
     data: finalServers,

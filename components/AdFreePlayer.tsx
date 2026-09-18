@@ -916,17 +916,16 @@ export default function AdFreePlayer({
   const isEmbedMode =
     format === "embed" || (!streamUrl && Boolean(embedUrl || tmdbId));
 
-  const activeEmbedUrl =
-    embedUrl ||
-    (tmdbId
-      ? getEmbedFallbackUrl(
-          tmdbId.toString(),
-          mediaType,
-          season,
-          episode,
-          currentServer
-        )
-      : "");
+  const activeEmbedUrl = tmdbId
+    ? getEmbedFallbackUrl(
+        tmdbId.toString(),
+        mediaType,
+        season,
+        episode,
+        currentServer,
+        initialAudioLang
+      )
+    : embedUrl || "";
 
   if (isEmbedMode) {
     return (
@@ -1035,6 +1034,7 @@ export default function AdFreePlayer({
 
         {/* Embedded Video Iframe */}
         <iframe
+          key={activeEmbedUrl}
           src={activeEmbedUrl}
           className="w-full h-full border-0 bg-black"
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope"
