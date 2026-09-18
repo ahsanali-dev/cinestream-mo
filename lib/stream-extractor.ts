@@ -55,6 +55,15 @@ const vixSrcInFlight = new Map<string, Promise<StreamData | null>>();
 const DEFAULT_NETMIRROR_BASE = "https://net52.cc";
 const NET27_REFERER = "https://videodownloader.site/";
 
+export const CF_WORKER_PROXY =
+  process.env.CLOUDFLARE_WORKER_PROXY_URL ||
+  "https://cinestream-proxy.ahsan-dev98.workers.dev";
+
+export function proxifyUrl(targetUrl: string): string {
+  if (!CF_WORKER_PROXY) return targetUrl;
+  return `${CF_WORKER_PROXY}?url=${encodeURIComponent(targetUrl)}`;
+}
+
 let cachedNetMirrorBase: { url: string; expiresAt: number } | null = null;
 
 export async function getActiveNetMirrorBase(): Promise<string> {
@@ -246,14 +255,19 @@ async function extractNetMirrorEmbed(
 
       if (!title) return null;
 
+      const fetchNM = (u: string, init?: RequestInit) => {
+        const proxied = proxifyUrl(u);
+        return fetch(proxied, init);
+      };
+
       // 2. Search NetMirror for the title
       const searchUrl = `${netMirrorBase}/search.php?s=${encodeURIComponent(title)}`;
-      const searchRes = await fetch(searchUrl, {
+      const searchRes = await fetchNM(searchUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
           Referer: `${netMirrorBase}/mobile/home?app=1`,
         },
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (searchRes.status === 429) {
@@ -280,12 +294,12 @@ async function extractNetMirrorEmbed(
       let targetNetId = match.id;
       if (type === "tv") {
         try {
-          const epRes = await fetch(`${netMirrorBase}/episodes.php?s=${match.id}&season=${season}`, {
+          const epRes = await fetchNM(`${netMirrorBase}/episodes.php?s=${match.id}&season=${season}`, {
             headers: {
               "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
               Referer: `${netMirrorBase}/mobile/home?app=1`,
             },
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(4000),
           });
           if (epRes.ok) {
             const epData = await epRes.json().catch(() => null);
@@ -297,12 +311,12 @@ async function extractNetMirrorEmbed(
       }
 
       // 3. Fetch Playlist from NetMirror
-      const plRes = await fetch(`${netMirrorBase}/playlist.php?id=${targetNetId}`, {
+      const plRes = await fetchNM(`${netMirrorBase}/playlist.php?id=${targetNetId}`, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
           Referer: `${netMirrorBase}/mobile/home?app=1`,
         },
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (plRes.status === 429) {
@@ -325,12 +339,12 @@ async function extractNetMirrorEmbed(
         : `${netMirrorBase}${primarySource.file}`;
 
       // 4. Fetch M3U8 manifest to discover genuine audio tracks & inspect child stream for anti-abuse bumper
-      const manifestRes = await fetch(masterPlaylistUrl, {
+      const manifestRes = await fetchNM(masterPlaylistUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           Referer: `${netMirrorBase}/`,
         },
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (manifestRes.status === 429) {
@@ -358,12 +372,12 @@ async function extractNetMirrorEmbed(
           ? firstStreamUrl
           : new URL(firstStreamUrl, masterPlaylistUrl).href;
         try {
-          const childRes = await fetch(fullChildUrl, {
+          const childRes = await fetchNM(fullChildUrl, {
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
               Referer: `${netMirrorBase}/`,
             },
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(4000),
           });
 
           if (childRes.ok) {
@@ -462,140 +476,151 @@ async function extractVixSrcHLS(
   episode: number,
   lang?: string,
 ): Promise<StreamData | null> {
-  try {
-    const langParam = lang
-      ? `?lang=${encodeURIComponent(lang.toLowerCase().slice(0, 2))}`
-      : "";
-    let apiUrl =
-      type === "movie"
-        ? `${VIXSRC_BASE}/api/movie/${tmdbId}${langParam}`
-        : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}${langParam}`;
+  const vixCacheKey = `vix_${type}_${tmdbId}_${season}_${episode}_${lang || "all"}`;
+  const inFlight = vixSrcInFlight.get(vixCacheKey);
+  if (inFlight) return inFlight;
 
-    let apiRes = await fetch(apiUrl, {
-      headers: VIXSRC_HEADERS,
-      signal: AbortSignal.timeout(7000),
-    });
-
-    let apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
-
-    if ((!apiData || !apiData.src) && lang) {
-      apiUrl =
+  const task = (async (): Promise<StreamData | null> => {
+    try {
+      const langParam = lang
+        ? `?lang=${encodeURIComponent(lang.toLowerCase().slice(0, 2))}`
+        : "";
+      let apiUrl =
         type === "movie"
-          ? `${VIXSRC_BASE}/api/movie/${tmdbId}`
-          : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}`;
-      apiRes = await fetch(apiUrl, {
+          ? `${VIXSRC_BASE}/api/movie/${tmdbId}${langParam}`
+          : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}${langParam}`;
+
+      let apiRes = await fetch(apiUrl, {
         headers: VIXSRC_HEADERS,
-        signal: AbortSignal.timeout(7000),
+        signal: AbortSignal.timeout(3000),
       });
-      apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
-    }
 
-    if (!apiData || !apiData.src) return null;
+      let apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
 
-    const embedUrl = `${VIXSRC_BASE}${apiData.src}`;
-    const embedRes = await fetch(embedUrl, {
-      headers: {
-        ...VIXSRC_HEADERS,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      signal: AbortSignal.timeout(7000),
-    });
+      if ((!apiData || !apiData.src) && lang) {
+        apiUrl =
+          type === "movie"
+            ? `${VIXSRC_BASE}/api/movie/${tmdbId}`
+            : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}`;
+        apiRes = await fetch(apiUrl, {
+          headers: VIXSRC_HEADERS,
+          signal: AbortSignal.timeout(3000),
+        });
+        apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
+      }
 
-    if (!embedRes.ok) return null;
-    const html = await embedRes.text();
+      if (!apiData || !apiData.src) return null;
 
-    const tokenMatch = html.match(/token["']\s*:\s*["']([^"']+)/);
-    const expiresMatch = html.match(/expires["']\s*:\s*["']([^"']+)/);
-    const playlistMatch = html.match(/url\s*:\s*["']([^"']+)/);
+      const embedUrl = `${VIXSRC_BASE}${apiData.src}`;
+      const embedRes = await fetch(embedUrl, {
+        headers: {
+          ...VIXSRC_HEADERS,
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        signal: AbortSignal.timeout(3000),
+      });
 
-    const token = tokenMatch?.[1];
-    const expires = expiresMatch?.[1];
-    const playlistUrl = playlistMatch?.[1];
+      if (!embedRes.ok) return null;
+      const html = await embedRes.text();
 
-    if (!token || !expires || !playlistUrl) return null;
+      const tokenMatch = html.match(/token["']\s*:\s*["']([^"']+)/);
+      const expiresMatch = html.match(/expires["']\s*:\s*["']([^"']+)/);
+      const playlistMatch = html.match(/url\s*:\s*["']([^"']+)/);
 
-    const sep = playlistUrl.includes("?") ? "&" : "?";
-    const masterPlaylistUrl = `${playlistUrl}${sep}token=${token}&expires=${expires}&h=1`;
+      const token = tokenMatch?.[1];
+      const expires = expiresMatch?.[1];
+      const playlistUrl = playlistMatch?.[1];
 
-    const playlistRes = await fetch(masterPlaylistUrl, {
-      headers: {
-        ...VIXSRC_HEADERS,
-        Referer: apiUrl,
-      },
-      signal: AbortSignal.timeout(7000),
-    });
+      if (!token || !expires || !playlistUrl) return null;
 
-    if (!playlistRes.ok) return null;
-    const manifestText = await playlistRes.text();
+      const sep = playlistUrl.includes("?") ? "&" : "?";
+      const masterPlaylistUrl = `${playlistUrl}${sep}token=${token}&expires=${expires}&h=1`;
 
-    const subtitles: SubtitleTrack[] = [];
-    const audioTracks: AudioTrack[] = [];
-    const qualities: QualityVariant[] = [];
+      const playlistRes = await fetch(masterPlaylistUrl, {
+        headers: {
+          ...VIXSRC_HEADERS,
+          Referer: apiUrl,
+        },
+        signal: AbortSignal.timeout(3000),
+      });
 
-    const lines = manifestText.split("\n");
+      if (!playlistRes.ok) return null;
+      const manifestText = await playlistRes.text();
 
-    for (const line of lines) {
-      if (line.includes("TYPE=AUDIO")) {
-        const rawLang =
-          line.match(/LANGUAGE=["']?([^"',\s]+)["']?/i)?.[1] || "und";
-        const rawLabel = line.match(/NAME=["']([^"']+)["']/i)?.[1] || "Audio";
-        const isDefault = line.includes("DEFAULT=YES");
-        const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
-        const info = resolveLanguageInfo(rawLang, rawLabel);
-        audioTracks.push({
-          label: info.name,
-          lang: info.code,
-          default: isDefault,
-          url: uri,
+      const subtitles: SubtitleTrack[] = [];
+      const audioTracks: AudioTrack[] = [];
+      const qualities: QualityVariant[] = [];
+
+      const lines = manifestText.split("\n");
+
+      for (const line of lines) {
+        if (line.includes("TYPE=AUDIO")) {
+          const rawLang =
+            line.match(/LANGUAGE=["']?([^"',\s]+)["']?/i)?.[1] || "und";
+          const rawLabel = line.match(/NAME=["']([^"']+)["']/i)?.[1] || "Audio";
+          const isDefault = line.includes("DEFAULT=YES");
+          const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
+          const info = resolveLanguageInfo(rawLang, rawLabel);
+          audioTracks.push({
+            label: info.name,
+            lang: info.code,
+            default: isDefault,
+            url: uri,
+          });
+        }
+
+        if (line.includes("TYPE=SUBTITLES")) {
+          const rawLang =
+            line.match(/LANGUAGE=["']?([^"',\s]+)["']?/i)?.[1] || "en";
+          const rawLabel =
+            line.match(/NAME=["']([^"']+)["']/i)?.[1] || "Subtitles";
+          const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
+          const info = resolveLanguageInfo(rawLang, rawLabel);
+          if (uri) {
+            subtitles.push({
+              label: info.name,
+              lang: info.code,
+              url: uri,
+              format: "vtt",
+            });
+          }
+        }
+      }
+
+      const variantRegex =
+        /#EXT-X-STREAM-INF:[^\n]*BANDWIDTH=(\d+)[^\n]*(?:RESOLUTION=\d+x(\d+))?[^\n]*\n([^\n]+)/g;
+      let match;
+      while ((match = variantRegex.exec(manifestText)) !== null) {
+        const bandwidth = parseInt(match[1], 10);
+        const res = match[2] ? `${match[2]}p` : "Auto";
+        const variantUrl = match[3].trim();
+        qualities.push({
+          quality: res,
+          resolution: match[2] || "Auto",
+          bandwidth,
+          url: variantUrl,
         });
       }
 
-      if (line.includes("TYPE=SUBTITLES")) {
-        const rawLang =
-          line.match(/LANGUAGE=["']?([^"',\s]+)["']?/i)?.[1] || "en";
-        const rawLabel =
-          line.match(/NAME=["']([^"']+)["']/i)?.[1] || "Subtitles";
-        const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
-        const info = resolveLanguageInfo(rawLang, rawLabel);
-        if (uri) {
-          subtitles.push({
-            label: info.name,
-            lang: info.code,
-            url: uri,
-            format: "vtt",
-          });
-        }
-      }
+      return {
+        success: true,
+        masterPlaylistUrl,
+        qualities,
+        subtitles,
+        audioTracks,
+        provider: "CineStream Cloud Direct (VixSrc)",
+        referer: apiUrl,
+      };
+    } catch {
+      return null;
+    } finally {
+      vixSrcInFlight.delete(vixCacheKey);
     }
+  })();
 
-    const variantRegex =
-      /#EXT-X-STREAM-INF:[^\n]*BANDWIDTH=(\d+)[^\n]*(?:RESOLUTION=\d+x(\d+))?[^\n]*\n([^\n]+)/g;
-    let match;
-    while ((match = variantRegex.exec(manifestText)) !== null) {
-      const bandwidth = parseInt(match[1], 10);
-      const res = match[2] ? `${match[2]}p` : "Auto";
-      const variantUrl = match[3].trim();
-      qualities.push({
-        quality: res,
-        resolution: match[2] || "Auto",
-        bandwidth,
-        url: variantUrl,
-      });
-    }
-
-    return {
-      success: true,
-      masterPlaylistUrl,
-      qualities,
-      subtitles,
-      audioTracks,
-      provider: "CineStream Cloud Direct (VixSrc)",
-      referer: apiUrl,
-    };
-  } catch {
-    return null;
-  }
+  vixSrcInFlight.set(vixCacheKey, task);
+  return task;
 }
 
 export interface ServerLanguageItem {
@@ -707,12 +732,8 @@ export async function probeAllServerLanguages(
     }
   }
 
-  // If no audio tracks detected, provide standard original audio option ONLY if VixSrc actually has a stream
-  if (
-    aggregated.length === 0 &&
-    vixRes.status === "fulfilled" &&
-    vixRes.value?.masterPlaylistUrl
-  ) {
+  // If no audio tracks detected, provide standard original audio option
+  if (aggregated.length === 0) {
     addTrack({
       id: "s1_orig_def",
       name: defaultOrigInfo.name || "English",
@@ -826,12 +847,14 @@ export async function probeAvailableServers(
     }
   }
 
+  const finalServers = validServers.length > 0 ? validServers : AVAILABLE_SERVERS;
+
   availableServersCache.set(cacheKey, {
-    data: validServers,
+    data: finalServers,
     expiresAt: Date.now() + 60 * 60 * 1000,
   });
 
-  return validServers;
+  return finalServers;
 }
 
 export async function extractDirectStream(

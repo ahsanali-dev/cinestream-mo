@@ -45,7 +45,8 @@ interface PlayerContainerProps {
 
 interface StreamData {
   streamUrl?: string | null;
-  format?: "hls" | "mp4";
+  embedUrl?: string | null;
+  format?: "hls" | "mp4" | "embed";
   subtitles?: { label: string; lang: string; url: string }[];
   audioTracks?: { label: string; lang: string; url?: string; default?: boolean }[];
   qualities?: string[];
@@ -243,7 +244,7 @@ export default function PlayerContainer({
 
         if (!isMounted) return;
 
-        if (data && data.success && data.streamUrl) {
+        if (data && data.success && (data.streamUrl || data.embedUrl)) {
           setDirectStream(data);
           if (Array.isArray(data.availableLanguages)) {
             setServerLanguages(data.availableLanguages);
@@ -627,6 +628,7 @@ export default function PlayerContainer({
               <AdFreePlayer
                 key={`adfree-player-${id}-${selectedSeason}-${selectedEpisode}-${selectedServer}-${selectedLanguage}`}
                 streamUrl={directStream.streamUrl || undefined}
+                embedUrl={directStream.embedUrl}
                 format={directStream.format}
                 title={title || (type === "tv" ? `Season ${selectedSeason} • Episode ${selectedEpisode}` : undefined)}
                 poster={backdropPath ? `https://image.tmdb.org/t/p/w1280${backdropPath}` : undefined}
@@ -723,7 +725,7 @@ export default function PlayerContainer({
           )}
 
           {/* If no verified direct servers exist and playback error occurred, show smart status banner */}
-          {availableServers.length === 0 && !isDirectLoading && directError && (
+          {availableServers.length === 0 && !isDirectLoading && directError && !directStream?.embedUrl && (
             <div className="pt-3 border-t border-white/10">
               <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold">
                 <span className="text-base">⚠️</span>
