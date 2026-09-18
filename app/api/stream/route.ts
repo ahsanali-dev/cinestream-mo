@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   extractDirectStream,
   probeAllServerLanguages,
-  getEmbedFallbackUrl,
-  AVAILABLE_SERVERS,
+  probeAvailableServers,
 } from "@/lib/stream-extractor";
 import { encryptStreamUrl } from "@/lib/stream-crypto";
 
@@ -36,38 +35,33 @@ export async function GET(request: NextRequest) {
 
   // Clean ID if slug format was passed (e.g. "550-fight-club")
   const numericId = id.split("-")[0];
-  const fallbackEmbedUrl = getEmbedFallbackUrl(
-    numericId,
-    type,
-    season,
-    episode,
-    server,
-    lang,
-  );
 
   try {
-    // Run stream extraction for requested server & probe all server languages in parallel
-    const [streamData, availableLanguages] = await Promise.all([
+    // Run stream extraction for requested server & probe all server languages and verified servers in parallel
+    const [streamData, availableLanguages, availableServers] = await Promise.all([
       extractDirectStream(numericId, type, season, episode, lang, server),
       probeAllServerLanguages(numericId, type, season, episode, origLang),
+      probeAvailableServers(numericId, type, season, episode),
     ]);
 
     if (!streamData || !streamData.masterPlaylistUrl) {
-      // Guaranteed fast cloud stream fallback
       return NextResponse.json(
         {
-          success: true,
+          success: false,
+          error: "Direct stream is currently unavailable for this title on our servers.",
           streamUrl: null,
-          embedUrl: fallbackEmbedUrl,
-          format: "embed",
+          embedUrl: null,
+          format: "hls",
           qualities: [],
           subtitles: [],
           audioTracks: [],
-          provider: "CineStream Ultra Cloud Stream",
           currentServer: server,
-          availableServers: AVAILABLE_SERVERS,
+          availableServers: availableServers || [],
           availableLanguages:
-            availableLanguages && availableLanguages.length > 0
+            availableServers &&
+            availableServers.length > 0 &&
+            availableLanguages &&
+            availableLanguages.length > 0
               ? availableLanguages
               : [],
         },
@@ -123,7 +117,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         streamUrl: finalStreamUrl,
-        embedUrl: fallbackEmbedUrl,
+        embedUrl: null,
         format: isMp4 ? "mp4" : "hls",
         qualities: streamData.qualities.map((q) => ({
           quality: q.quality,
@@ -134,7 +128,17 @@ export async function GET(request: NextRequest) {
         audioTracks: proxiedAudioTracks,
         provider: streamData.provider || "CineStream Ultra Cloud",
         currentServer: server,
-        availableServers: AVAILABLE_SERVERS,
+        availableServers:
+          availableServers && availableServers.length > 0
+            ? availableServers
+            : [
+                {
+                  id: server,
+                  name: streamData.provider || "Server 1",
+                  badge: "1080p Ultra HD",
+                  description: "Direct stream",
+                },
+              ],
         availableLanguages,
       },
       {
@@ -151,16 +155,17 @@ export async function GET(request: NextRequest) {
     console.error("Stream API route error:", error);
     return NextResponse.json(
       {
-        success: true,
+        success: false,
+        error: "Direct stream could not be loaded. Please try again later.",
         streamUrl: null,
-        embedUrl: fallbackEmbedUrl,
-        format: "embed",
+        embedUrl: null,
+        format: "hls",
         qualities: [],
         subtitles: [],
         audioTracks: [],
         provider: "CineStream Cloud Stream",
         currentServer: server,
-        availableServers: AVAILABLE_SERVERS,
+        availableServers: [],
         availableLanguages: [],
       },
       { status: 200, headers: CORS_HEADERS },

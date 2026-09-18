@@ -45,8 +45,7 @@ interface PlayerContainerProps {
 
 interface StreamData {
   streamUrl?: string | null;
-  format?: "hls" | "mp4" | "embed";
-  embedUrl?: string;
+  format?: "hls" | "mp4";
   subtitles?: { label: string; lang: string; url: string }[];
   audioTracks?: { label: string; lang: string; url?: string; default?: boolean }[];
   qualities?: string[];
@@ -103,6 +102,9 @@ export default function PlayerContainer({
   const router = useRouter();
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
   const [selectedServer, setSelectedServer] = useState<string>("server1");
+  const [availableServers, setAvailableServers] = useState<
+    { id: string; name: string; badge: string; description: string }[]
+  >([]);
   const [serverLanguages, setServerLanguages] = useState<ServerLanguageItem[]>([]);
   const [isSeasonDropdownOpen, setIsSeasonDropdownOpen] = useState<boolean>(false);
   const seasonDropdownRef = useRef<HTMLDivElement>(null);
@@ -241,46 +243,40 @@ export default function PlayerContainer({
 
         if (!isMounted) return;
 
-        if (data && data.success && (data.streamUrl || data.embedUrl)) {
+        if (data && data.success && data.streamUrl) {
           setDirectStream(data);
-          if (Array.isArray(data.availableLanguages) && data.availableLanguages.length > 0) {
+          if (Array.isArray(data.availableLanguages)) {
             setServerLanguages(data.availableLanguages);
+          }
+          if (Array.isArray(data.availableServers)) {
+            setAvailableServers(data.availableServers);
+            // If currently selected server is not in available servers, select first available
+            if (
+              data.availableServers.length > 0 &&
+              !data.availableServers.some((s: any) => s.id === selectedServer)
+            ) {
+              setSelectedServer(data.availableServers[0].id);
+            }
           }
           setDirectError(null);
         } else {
-          // Fallback embed generator so error screen is never shown to the user
-          const numericId = id.split("-")[0];
-          const fallbackEmbed =
-            type === "movie"
-              ? `https://vidlink.pro/movie/${numericId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
-              : `https://vidlink.pro/tv/${numericId}/${selectedSeason}/${selectedEpisode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
-
-          setDirectStream({
-            streamUrl: null,
-            embedUrl: fallbackEmbed,
-            format: "embed",
-            provider: "CineStream Ultra Cloud",
-            currentServer: selectedServer,
-          });
-          setDirectError(null);
+          setDirectStream(null);
+          if (Array.isArray(data?.availableServers)) {
+            setAvailableServers(data.availableServers);
+          }
+          if (Array.isArray(data?.availableLanguages)) {
+            setServerLanguages(data.availableLanguages);
+          }
+          setDirectError(
+            data?.error ||
+              "Direct stream is currently unavailable for this title on our servers."
+          );
         }
       } catch (error) {
         console.error("Direct stream fetch error:", error);
         if (isMounted) {
-          const numericId = id.split("-")[0];
-          const fallbackEmbed =
-            type === "movie"
-              ? `https://vidlink.pro/movie/${numericId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
-              : `https://vidlink.pro/tv/${numericId}/${selectedSeason}/${selectedEpisode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
-
-          setDirectStream({
-            streamUrl: null,
-            embedUrl: fallbackEmbed,
-            format: "embed",
-            provider: "CineStream Ultra Cloud",
-            currentServer: selectedServer,
-          });
-          setDirectError(null);
+          setDirectStream(null);
+          setDirectError("Direct stream could not be loaded. Please try again later.");
         }
       } finally {
         if (isMounted) {
@@ -461,7 +457,12 @@ export default function PlayerContainer({
     setSelectedLanguage(clean);
     setPreferredAudioLanguage(clean);
     if (serverId && serverId !== selectedServer) {
-      setSelectedServer(serverId);
+      if (
+        availableServers.length === 0 ||
+        availableServers.some((s) => s.id === serverId)
+      ) {
+        setSelectedServer(serverId);
+      }
     }
   };
 
@@ -626,7 +627,6 @@ export default function PlayerContainer({
               <AdFreePlayer
                 key={`adfree-player-${id}-${selectedSeason}-${selectedEpisode}-${selectedServer}-${selectedLanguage}`}
                 streamUrl={directStream.streamUrl || undefined}
-                embedUrl={directStream.embedUrl}
                 format={directStream.format}
                 title={title || (type === "tv" ? `Season ${selectedSeason} • Episode ${selectedEpisode}` : undefined)}
                 poster={backdropPath ? `https://image.tmdb.org/t/p/w1280${backdropPath}` : undefined}
@@ -642,7 +642,7 @@ export default function PlayerContainer({
                 audioTracks={directStream.audioTracks}
                 initialAudioLang={selectedLanguage}
                 serverLanguages={serverLanguages}
-                servers={directStream.availableServers}
+                servers={availableServers.length > 0 ? availableServers : directStream.availableServers || []}
                 currentServer={selectedServer}
                 onServerChange={(sId, targetLang) => {
                   setSelectedServer(sId);
@@ -682,6 +682,55 @@ export default function PlayerContainer({
               {contentAdvisory || "violence, threat, mature themes, tobacco use"}
             </span>
           </div>
+
+          {/* Smart Stream Servers Selector - Shows ONLY verified available servers for this title */}
+          {availableServers.length > 0 && (
+            <div className="pt-3 border-t border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Active Servers ({availableServers.length} Available)
+                </span>
+                <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                  Connected: {availableServers.find((s) => s.id === selectedServer)?.name.split("(")[0].trim() || "Server 1"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap py-1">
+                {availableServers.map((srv) => {
+                  const isSelected = selectedServer === srv.id;
+                  return (
+                    <button
+                      key={srv.id}
+                      type="button"
+                      onClick={() => setSelectedServer(srv.id)}
+                      className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                        isSelected
+                          ? "bg-accent/20 border-accent text-white shadow-lg shadow-accent/20"
+                          : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${isSelected ? "bg-accent animate-pulse" : "bg-white/30"}`} />
+                      <span>{srv.name.split("(")[0].trim()}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-white/60">
+                        {srv.badge}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* If no verified direct servers exist and playback error occurred, show smart status banner */}
+          {availableServers.length === 0 && !isDirectLoading && directError && (
+            <div className="pt-3 border-t border-white/10">
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold">
+                <span className="text-base">⚠️</span>
+                <span>{directError}</span>
+              </div>
+            </div>
+          )}
 
           {/* Clean Audio Languages Selector - Pure Language Names Only */}
           <div className="pt-3 border-t border-white/10 space-y-3">

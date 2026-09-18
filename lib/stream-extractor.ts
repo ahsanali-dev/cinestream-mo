@@ -684,23 +684,35 @@ export async function probeAllServerLanguages(
     netMirrorRes.value.masterPlaylistUrl &&
     netMirrorRes.value.audioTracks.length > 0
   ) {
-    for (const track of netMirrorRes.value.audioTracks) {
-      const info = resolveLanguageInfo(track.lang, track.label);
-      addTrack({
-        id: `nm_${info.code}_${aggregated.length}`,
-        name: info.name,
-        code: info.code,
-        serverId: "server2",
-        serverName: "Server 2 (NetMirror HD)",
-        serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
-        provider: "NetMirror Ultra Cloud HD",
-        isDefault: false,
-      });
+    const isNetMirrorBumper = Boolean(netMirrorRes.value.isAbuseVideo);
+    const vixHasStream = Boolean(
+      vixRes.status === "fulfilled" && vixRes.value?.masterPlaylistUrl
+    );
+
+    // Only show audio dubs if playable video exists (either NetMirror video is real or VixSrc video can be fused)
+    if (!isNetMirrorBumper || vixHasStream) {
+      for (const track of netMirrorRes.value.audioTracks) {
+        const info = resolveLanguageInfo(track.lang, track.label);
+        addTrack({
+          id: `nm_${info.code}_${aggregated.length}`,
+          name: info.name,
+          code: info.code,
+          serverId: "server2",
+          serverName: "Server 2 (NetMirror HD)",
+          serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
+          provider: "NetMirror Ultra Cloud HD",
+          isDefault: false,
+        });
+      }
     }
   }
 
-  // If no audio tracks detected, provide standard original audio option
-  if (aggregated.length === 0) {
+  // If no audio tracks detected, provide standard original audio option ONLY if VixSrc actually has a stream
+  if (
+    aggregated.length === 0 &&
+    vixRes.status === "fulfilled" &&
+    vixRes.value?.masterPlaylistUrl
+  ) {
     addTrack({
       id: "s1_orig_def",
       name: defaultOrigInfo.name || "English",
@@ -746,6 +758,80 @@ export async function probeAllServerLanguages(
   });
 
   return aggregated;
+}
+
+// In-memory cache for available verified servers per title
+const availableServersCache = new Map<
+  string,
+  { data: ServerOption[]; expiresAt: number }
+>();
+
+/**
+ * Smart Multi-Server Availability Prober
+ * Verifies which servers ACTUALLY have playable streams for a specific title.
+ * Excludes any server where media is missing or rate-limited.
+ */
+export async function probeAvailableServers(
+  tmdbId: string,
+  type: "movie" | "tv" = "movie",
+  season = 1,
+  episode = 1,
+): Promise<ServerOption[]> {
+  const cacheKey = `avail_servers_${type}_${tmdbId}_${season}_${episode}`;
+  const cached = availableServersCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  const [vixRes, netMirrorRes] = await Promise.allSettled([
+    extractVixSrcHLS(tmdbId, type, season, episode),
+    netMirrorCooldownUntil > Date.now()
+      ? Promise.resolve(null)
+      : extractNetMirrorEmbed(tmdbId, type, season, episode),
+  ]);
+
+  const vixData = vixRes.status === "fulfilled" ? vixRes.value : null;
+  const netData = netMirrorRes.status === "fulfilled" ? netMirrorRes.value : null;
+
+  const validServers: ServerOption[] = [];
+
+  // Server 1 (CineStream Ultra Fast HD): verified if VixSrc has genuine master playlist
+  if (vixData && vixData.masterPlaylistUrl) {
+    validServers.push({
+      id: "server1",
+      name: "Server 1 (CineStream Ultra Fast HD)",
+      badge: "1080p Ultra HD",
+      description: "Ultra-fast direct HLS stream with multi-audio dubs & subtitles",
+    });
+  }
+
+  // Server 2 (Global CDN HD / NetMirror): verified if NetMirror has valid video or hybrid fusion
+  const isNetMirrorBumper = Boolean(netData?.isAbuseVideo);
+  if (netData && netData.masterPlaylistUrl) {
+    if (!isNetMirrorBumper) {
+      validServers.push({
+        id: "server2",
+        name: "Server 2 (Global CDN HD)",
+        badge: "Multi-Audio HD",
+        description: "Direct high-speed stream with multi-language dubs",
+      });
+    } else if (vixData && vixData.masterPlaylistUrl) {
+      // NetMirror genuine audio fused with clean 1080p VixSrc video
+      validServers.push({
+        id: "server2",
+        name: "Server 2 (NetMirror Multi-Audio HD)",
+        badge: "1080p Multi-Audio HD",
+        description: "1080p Ultra HD stream with NetMirror genuine audio dubs",
+      });
+    }
+  }
+
+  availableServersCache.set(cacheKey, {
+    data: validServers,
+    expiresAt: Date.now() + 60 * 60 * 1000,
+  });
+
+  return validServers;
 }
 
 export async function extractDirectStream(
@@ -823,8 +909,8 @@ export async function extractDirectStream(
     }
   }
 
-  // Scenario 2: User requested Hindi
-  if (!chosenStream && wantsHindi) {
+  // Scenario 2: User requested specific language or Hindi
+  if (!chosenStream && (wantsHindi || lang)) {
     if (netData && !isNetMirrorBumper) {
       chosenStream = { ...netData };
     } else if (vixData) {

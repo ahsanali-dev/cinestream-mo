@@ -10,7 +10,6 @@ import {
   setPreferredAudioLanguage,
 } from "@/lib/languages";
 import { saveWatchProgress, getSavedProgress } from "@/lib/watch-history";
-import { getEmbedFallbackUrl } from "@/lib/stream-extractor";
 
 interface SubtitleTrack {
   label: string;
@@ -46,8 +45,7 @@ export interface ServerOption {
 
 interface AdFreePlayerProps {
   streamUrl?: string | null;
-  embedUrl?: string;
-  format?: "hls" | "mp4" | "embed";
+  format?: "hls" | "mp4";
   title?: string;
   poster?: string;
   mediaId: string;
@@ -70,7 +68,6 @@ interface AdFreePlayerProps {
 
 export default function AdFreePlayer({
   streamUrl,
-  embedUrl,
   format,
   title,
   poster,
@@ -86,13 +83,7 @@ export default function AdFreePlayer({
   audioTracks = [],
   initialAudioLang,
   serverLanguages = [],
-  servers = [
-    { id: "server1", name: "Server 1 (CineStream Ultra Fast HD)", badge: "1080p Ultra HD", description: "Ultra-fast direct HLS with multi-audio dubs & subtitles" },
-    { id: "server2", name: "Server 2 (Global CDN HD)", badge: "Multi-Audio HD", description: "Direct high-speed stream with multi-language support" },
-    { id: "server3", name: "Server 3 (CineStream Cloud Direct)", badge: "Fast HD", description: "Direct stream cloud backup" },
-    { id: "server4", name: "Server 4 (Global Multi-Stream Backup)", badge: "Backup", description: "Global CDN direct stream backup" },
-    { id: "server5", name: "Server 5 (Cloud Direct Stream)", badge: "Direct", description: "Direct unblocked cloud media stream" },
-  ],
+  servers = [],
   currentServer = "server1",
   onServerChange,
   onClose,
@@ -148,8 +139,7 @@ export default function AdFreePlayer({
   // Language notification toast
   const [languageNotice, setLanguageNotice] = useState<string | null>(null);
 
-  // Embed Cloud Player Server Menu state
-  const [isEmbedServerMenuOpen, setIsEmbedServerMenuOpen] = useState(false);
+  const [showAutoDubNotice, setShowAutoDubNotice] = useState(false);
 
   // Internal Retry Key for self-contained player reload
   const [retryKey, setRetryKey] = useState(0);
@@ -917,139 +907,7 @@ export default function AdFreePlayer({
     }
   };
 
-  // Check if we should render in Cloud Embed mode (if format is "embed" or no streamUrl is available)
-  const isEmbedMode =
-    format === "embed" || (!streamUrl && Boolean(embedUrl || tmdbId));
 
-  const activeEmbedUrl =
-    embedUrl ||
-    (tmdbId
-      ? getEmbedFallbackUrl(
-          tmdbId.toString(),
-          mediaType,
-          season,
-          episode,
-          currentServer
-        )
-      : "");
-
-  if (isEmbedMode) {
-    return (
-      <div
-        ref={containerRef}
-        className="relative w-full h-full bg-black select-none group overflow-hidden flex flex-col justify-between"
-      >
-        {/* Top Header Bar */}
-        <div className="absolute top-0 left-0 right-0 p-4 md:p-6 z-30 flex items-center justify-between bg-gradient-to-b from-black/90 via-black/50 to-transparent pt-[max(env(safe-area-inset-top,0px),16px)] pointer-events-auto">
-          <div className="flex items-center gap-3 truncate mr-4">
-            {title && (
-              <h3 className="text-xs md:text-sm font-bold text-white/90 truncate drop-shadow-md">
-                {title}
-              </h3>
-            )}
-            <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-accent/20 text-accent border border-accent/30">
-              Cloud HD Stream
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Server Selector Dropdown Button */}
-            {servers && servers.length > 0 && onServerChange && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsEmbedServerMenuOpen(!isEmbedServerMenuOpen)}
-                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95"
-                >
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="hidden sm:inline">
-                    {servers.find((s) => s.id === currentServer)?.name.split("(")[0].trim() || "Server 1"}
-                  </span>
-                  <span className="sm:hidden">Servers</span>
-                  <svg className="w-3.5 h-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {isEmbedServerMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 z-50 w-64 rounded-2xl bg-[#141418]/98 border border-white/15 p-2 shadow-2xl space-y-1 backdrop-blur-xl">
-                    <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white/40 border-b border-white/5">
-                      Select Cloud Stream Server
-                    </div>
-                    {servers.map((s) => {
-                      const isSelected = s.id === currentServer;
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => {
-                            onServerChange(s.id);
-                            setIsEmbedServerMenuOpen(false);
-                            setLanguageNotice(`Switched to ${s.name}`);
-                            setTimeout(() => setLanguageNotice(null), 3000);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            isSelected
-                              ? "bg-accent text-white shadow-md"
-                              : "text-white/70 hover:text-white hover:bg-white/5"
-                          }`}
-                        >
-                          <div className="flex flex-col text-left truncate">
-                            <span className="truncate">{s.name}</span>
-                            <span className="text-[10px] opacity-60 font-normal">{s.badge}</span>
-                          </div>
-                          {isSelected && <span className="text-xs font-black ml-2">✓</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Fullscreen Button */}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer"
-              title="Fullscreen"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <polyline points="15 3 21 3 21 9" />
-                <polyline points="9 21 3 21 3 15" />
-                <line x1="21" y1="3" x2="14" y2="10" />
-                <line x1="3" y1="21" x2="10" y2="14" />
-              </svg>
-            </button>
-
-            {/* Close Button (✕) */}
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-red-600 border border-white/15 hover:border-red-500 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
-                title="Close Player (Esc)"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Embedded Video Iframe */}
-        <iframe
-          src={activeEmbedUrl}
-          className="w-full h-full border-0 bg-black"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope"
-          allowFullScreen
-          referrerPolicy="origin"
-          title={title || "CineStream Player"}
-        />
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1321,26 +1179,28 @@ export default function AdFreePlayer({
               </button>
 
               {/* Tab 5: Server (Servers Stack Icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveMenu("servers")}
-                className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
-                  activeMenu === "servers" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
-                }`}
-                title="Change Server"
-              >
-                <svg className="w-5 h-5 fill-none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <rect x="2" y="3" width="20" height="5" rx="1.5" />
-                  <rect x="2" y="10" width="20" height="5" rx="1.5" />
-                  <rect x="2" y="17" width="20" height="5" rx="1.5" />
-                  <circle cx="6" cy="5.5" r="1" fill="currentColor" />
-                  <circle cx="6" cy="12.5" r="1" fill="currentColor" />
-                  <circle cx="6" cy="19.5" r="1" fill="currentColor" />
-                </svg>
-                {activeMenu === "servers" && (
-                  <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
-                )}
-              </button>
+              {servers && servers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveMenu("servers")}
+                  className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
+                    activeMenu === "servers" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
+                  }`}
+                  title="Change Server"
+                >
+                  <svg className="w-5 h-5 fill-none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <rect x="2" y="3" width="20" height="5" rx="1.5" />
+                    <rect x="2" y="10" width="20" height="5" rx="1.5" />
+                    <rect x="2" y="17" width="20" height="5" rx="1.5" />
+                    <circle cx="6" cy="5.5" r="1" fill="currentColor" />
+                    <circle cx="6" cy="12.5" r="1" fill="currentColor" />
+                    <circle cx="6" cy="19.5" r="1" fill="currentColor" />
+                  </svg>
+                  {activeMenu === "servers" && (
+                    <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
+                  )}
+                </button>
+              )}
             </div>
 
             {/* Close ✕ Button */}
