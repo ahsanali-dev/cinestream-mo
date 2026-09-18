@@ -1059,14 +1059,13 @@ export default function AdFreePlayer({
           </div>
         </div>
 
-        {/* Embedded Video Iframe with HTML5 Security Sandbox */}
+        {/* Embedded Video Iframe (Sandbox disabled to allow third-party streaming providers like VixSrc/VidSrc to play without 'Sandbox not allowed' error) */}
         <iframe
           key={activeEmbedUrl}
           src={activeEmbedUrl}
           className="w-full h-full border-0 bg-black"
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope"
           allowFullScreen
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           referrerPolicy="origin"
           title={title || "CineStream Player"}
         />

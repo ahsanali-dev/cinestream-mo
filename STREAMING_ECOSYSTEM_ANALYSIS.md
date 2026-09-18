@@ -150,7 +150,7 @@ Unlike NetMirror, MovieBox is a **Multi-Source Hybrid Content Aggregator**:
    * *Problem:* Fallback providers often wrap video players in iframes filled with pop-under ads, malware redirects, and betting ads.
    * *Resolution:*
      * **Direct HLS Manifest Extraction:** Extract the raw `.m3u8` playlist URL directly from the provider and stream it through our custom ad-free player (`AdFreePlayer.tsx`).
-     * **HTML5 Iframe Sandboxing:** When an iframe must be used, restrict it via `sandbox="allow-scripts allow-same-origin"` and block known ad network scripts (`adsterra`, `popads`, etc.).
+     * **HTML5 Iframe Sandboxing (Anti-Sandbox Bypass):** While sandboxing is ideal for restricting ads, modern fallback providers (e.g., VixSrc, VidSrc) run anti-sandbox checks that strictly refuse to play with `"Sandbox not allowed. Remove sandbox from the iframe to play"` or `"Please Disable Sandbox"`. The `sandbox` attribute must be omitted on embed iframes to ensure universal cross-server compatibility.
      * **Native Webview Interception:** In React Native, implement `shouldOverrideUrlLoading` in `react-native-webview` to block external redirects and unwanted tab creation.
 4. **Lack of Hindi / Multi-Audio on Non-Netflix Titles:**
    * *Problem:* While NetMirror carries official Hindi audio for Netflix content, standard web scrapers (VidSrc, VixSrc) usually only carry original English audio.
