@@ -71,8 +71,48 @@ export const getTeluguMovies = async (page = 1) => getByLanguage("te", page, "mo
 export const getKoreanShows = async (page = 1) => getByLanguage("ko", page, "tv");
 
 
-export const getMovieDetails = async (id: string, type: "movie" | "tv") => {
-  return await fetchTMDB(`/${type}/${id}`, "append_to_response=videos,credits,recommendations,keywords,release_dates,content_ratings");
+const movieDetailsCache = new Map<string, any>();
+
+export const getMovieDetails = async (idOrSlug: string, type: "movie" | "tv") => {
+  if (!idOrSlug) return null;
+  const cacheKey = `${type}_${idOrSlug.toLowerCase().trim()}`;
+  if (movieDetailsCache.has(cacheKey)) {
+    return movieDetailsCache.get(cacheKey);
+  }
+
+  // 1. Check if input is a numeric TMDB ID (e.g. "674" or "674-harry-potter")
+  const numericPart = idOrSlug.split("-")[0];
+  if (/^\d+$/.test(numericPart)) {
+    const data = await fetchTMDB(
+      `/${type}/${numericPart}`,
+      "append_to_response=videos,credits,recommendations,keywords,release_dates,content_ratings"
+    );
+    if (data) movieDetailsCache.set(cacheKey, data);
+    return data;
+  }
+
+  // 2. Pure title slug resolution (e.g. "harry-potter-and-the-goblet-of-fire")
+  const cleanQuery = idOrSlug.replace(/[-_]+/g, " ").trim();
+  const searchData = await fetchTMDB(
+    `/search/${type}`,
+    `query=${encodeURIComponent(cleanQuery)}`
+  );
+
+  const topResult = searchData?.results?.[0];
+  if (topResult?.id) {
+    const data = await fetchTMDB(
+      `/${type}/${topResult.id}`,
+      "append_to_response=videos,credits,recommendations,keywords,release_dates,content_ratings"
+    );
+    if (data) {
+      movieDetailsCache.set(cacheKey, data);
+      // Also cache under numeric ID
+      movieDetailsCache.set(`${type}_${topResult.id}`, data);
+    }
+    return data;
+  }
+
+  return null;
 };
 
 export const getTVShowEpisodes = async (id: string, season: number) => {

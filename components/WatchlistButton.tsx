@@ -9,7 +9,7 @@ export default function WatchlistButton({ item }: { item: WatchlistItem }) {
   return (
     <button
       onClick={() => toggle(item)}
-      className={`flex items-center gap-2.5 rounded-xl px-6 py-3.5 text-xs md:text-sm font-black uppercase tracking-wider backdrop-blur-md transition-all duration-300 cursor-pointer ${
+      className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 sm:px-6 sm:py-3.5 text-xs md:text-sm font-black uppercase tracking-wider backdrop-blur-md transition-all duration-300 cursor-pointer ${
         inWatchlist
           ? "bg-accent text-white border border-accent shadow-lg shadow-accent/30 scale-105"
           : "bg-white/10 text-white hover:bg-white/20 border border-white/10 hover:border-white/20"

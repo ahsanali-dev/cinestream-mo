@@ -149,15 +149,15 @@ export const AVAILABLE_SERVERS: ServerOption[] = [
   },
   {
     id: "server2",
-    name: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
-    badge: "Hindi Dubbed HD",
-    description: "Direct stream with multi-language & Hindi dubs",
+    name: "Server 2 (VidLink 1080p Stream)",
+    badge: "1080p Fast",
+    description: "Ultra-clean 1080p stream with multi-subtitles and fast buffering",
   },
   {
     id: "server3",
-    name: "Server 3 (VidLink 1080p Stream)",
-    badge: "1080p Fast",
-    description: "1080p stream with multi-subtitles and auto-next",
+    name: "Server 3 (AutoEmbed Cloud HD)",
+    badge: "Clean HD",
+    description: "Direct cloud backup stream without interruptions",
   },
   {
     id: "server4",
@@ -190,13 +190,6 @@ export function getEmbedFallbackUrl(
     lang && (lang.toLowerCase().includes("hin") || lang.toLowerCase() === "hi")
   );
 
-  // If Hindi requested or Server 2 selected, prioritize MultiEmbed which provides Hindi audio
-  if (serverId === "server2" || wantsHindi) {
-    return type === "movie"
-      ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
-      : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
-  }
-
   switch (serverId) {
     case "server1":
       // Vidsrc.su (Ultra-fast modern HTML5 player, no block, works for all titles)
@@ -205,16 +198,16 @@ export function getEmbedFallbackUrl(
         : `https://vidsrc.su/embed/tv/${cleanId}/${season}/${episode}`;
 
     case "server2":
-      // Multi-Audio / Hindi Dubbed (MultiEmbed)
-      return type === "movie"
-        ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
-        : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
-
-    case "server3":
-      // VidLink (1080p, Auto Next, Subtitles)
+      // VidLink (Clean 1080p, Auto Next, Subtitles, Zero popups, No McAfee block)
       return type === "movie"
         ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
         : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
+
+    case "server3":
+      // AutoEmbed (Direct clean cloud stream)
+      return type === "movie"
+        ? `https://autoembed.co/movie/tmdb/${cleanId}`
+        : `https://autoembed.co/tv/tmdb/${cleanId}-${season}-${episode}`;
 
     case "server4":
       // 2Embed (Reliable high-speed stream)
@@ -308,14 +301,18 @@ async function extractNetMirrorEmbed(
         return null;
       }
 
-      // Match best result
-      const cleanT = title.toLowerCase().trim();
-      const match =
-        searchData.searchResult.find((r: any) => r.t && r.t.toLowerCase().trim() === cleanT) ||
-        searchData.searchResult.find((r: any) => r.t && r.t.toLowerCase().includes(cleanT)) ||
-        searchData.searchResult[0];
+      // Match exact title (ignoring punctuation & case)
+      const normTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const match = searchData.searchResult.find((r: any) => {
+        if (!r.t) return false;
+        const normCandidate = r.t.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return normCandidate === normTitle;
+      });
 
-      if (!match || !match.id) return null;
+      if (!match || !match.id) {
+        console.warn(`[NetMirror] No exact title match found for "${title}"`);
+        return null;
+      }
 
       let targetNetId = match.id;
       if (type === "tv") {
@@ -464,13 +461,7 @@ async function extractNetMirrorEmbed(
           { quality: "720p", resolution: "720p", bandwidth: 2500000, url: masterPlaylistUrl },
         ],
         subtitles,
-        audioTracks:
-          audioTracks.length > 0
-            ? audioTracks
-            : [
-                { label: "Hindi", lang: "HIN", default: true },
-                { label: "English", lang: "ENG", default: false },
-              ],
+        audioTracks: audioTracks,
         provider: "NetMirror Ultra Cloud HD",
         referer: `${netMirrorBase}/`,
       };
@@ -731,21 +722,22 @@ export async function probeAllServerLanguages(
     }
   }
 
-  // 2. Secondary: NetMirror Genuine Audio Tracks (Server 2 - Multi-Audio & Hindi Dubbed HD)
+  // 2. Secondary: NetMirror Genuine Audio Tracks (Fused into Server 1 Direct HLS)
   if (
     netMirrorRes.status === "fulfilled" &&
     netMirrorRes.value &&
-    netMirrorRes.value.masterPlaylistUrl &&
+    netMirrorRes.value.audioTracks &&
     netMirrorRes.value.audioTracks.length > 0
   ) {
     for (const track of netMirrorRes.value.audioTracks) {
       const info = resolveLanguageInfo(track.lang, track.label);
+      if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
       addTrack({
         id: `nm_${info.code}_${aggregated.length}`,
         name: info.name,
         code: info.code,
-        serverId: "server2",
-        serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
+        serverId: "server1",
+        serverName: "Server 1 (CineStream Ultra Fast HD)",
         serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
         provider: "NetMirror Ultra Cloud HD",
         isDefault: false,
@@ -753,19 +745,7 @@ export async function probeAllServerLanguages(
     }
   }
 
-  // Multi-Audio / Hindi Dubbed fallback via Server 2 (MultiEmbed) if not natively present
-  if (!seenKeys.has("hindi")) {
-    addTrack({
-      id: "s2_hin_dub",
-      name: "Hindi",
-      code: "HIN",
-      serverId: "server2",
-      serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
-      serverBadge: "Hindi Dubbed HD",
-      provider: "CineStream Multi-Audio Cloud",
-      isDefault: false,
-    });
-  }
+
 
   // Genuine Original Hindi audio handling (e.g. Bollywood/Indian content)
   const isOriginalHindi = origLang === "hi" || origLang === "hin";
@@ -872,53 +852,79 @@ export async function probeAvailableServers(
     return cached.data;
   }
 
-  const [vixRes, netMirrorRes] = await Promise.allSettled([
-    extractVixSrcHLS(tmdbId, type, season, episode),
-    netMirrorCooldownUntil > Date.now()
-      ? Promise.resolve(null)
-      : extractNetMirrorEmbed(tmdbId, type, season, episode),
+  const cleanId = tmdbId.split("-")[0];
+
+  const [vixRes, vidlinkRes, autoembedRes, twoembedRes] = await Promise.allSettled([
+    extractVixSrcHLS(cleanId, type, season, episode),
+    fetch(
+      type === "movie"
+        ? `https://vidlink.pro/movie/${cleanId}`
+        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}`,
+      { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
+    ),
+    fetch(
+      type === "movie"
+        ? `https://autoembed.co/movie/tmdb/${cleanId}`
+        : `https://autoembed.co/tv/tmdb/${cleanId}-${season}-${episode}`,
+      { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
+    ),
+    fetch(
+      type === "movie"
+        ? `https://www.2embed.cc/embed/${cleanId}`
+        : `https://www.2embed.cc/embedtv/${cleanId}&s=${season}&e=${episode}`,
+      { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
+    ),
   ]);
 
   const vixData = vixRes.status === "fulfilled" ? vixRes.value : null;
-  const netData = netMirrorRes.status === "fulfilled" ? netMirrorRes.value : null;
+  const isVidlinkOk = vidlinkRes.status === "fulfilled" && vidlinkRes.value.ok;
+  const isAutoembedOk = autoembedRes.status === "fulfilled" && autoembedRes.value.ok;
+  const is2embedOk = twoembedRes.status === "fulfilled" && twoembedRes.value.ok;
 
   const validServers: ServerOption[] = [];
 
-  // Server 1 (CineStream Ultra Fast HD): verified if VixSrc has genuine master playlist
+  // Server 1 (CineStream Fast HD): verified if VixSrc has genuine master playlist
   if (vixData && vixData.masterPlaylistUrl) {
     validServers.push({
       id: "server1",
-      name: "Server 1 (CineStream Ultra Fast HD)",
-      badge: "1080p Ultra HD",
-      description: "Ultra-fast direct HLS stream with multi-audio dubs & subtitles",
+      name: "Server 1 (CineStream Fast HD)",
+      badge: "Fast HD",
+      description: "Ultra-fast unblocked cloud stream with instant loading",
     });
   }
 
-  // Server 2 (Global CDN HD / NetMirror): verified if NetMirror has valid video or hybrid fusion
-  const isNetMirrorBumper = Boolean(netData?.isAbuseVideo);
-  if (netData && netData.masterPlaylistUrl) {
-    if (!isNetMirrorBumper) {
-      validServers.push({
-        id: "server2",
-        name: "Server 2 (Global CDN HD)",
-        badge: "Multi-Audio HD",
-        description: "Direct high-speed stream with multi-language dubs",
-      });
-    } else if (vixData && vixData.masterPlaylistUrl) {
-      // NetMirror genuine audio fused with clean 1080p VixSrc video
-      validServers.push({
-        id: "server2",
-        name: "Server 2 (NetMirror Multi-Audio HD)",
-        badge: "1080p Multi-Audio HD",
-        description: "1080p Ultra HD stream with NetMirror genuine audio dubs",
-      });
-    }
+  // Server 2 (VidLink 1080p Stream): verified if VidLink is available and non-error
+  if (isVidlinkOk) {
+    validServers.push({
+      id: "server2",
+      name: "Server 2 (VidLink 1080p Stream)",
+      badge: "1080p Fast",
+      description: "Ultra-clean 1080p stream with multi-subtitles and fast buffering",
+    });
   }
 
-  const finalServers = AVAILABLE_SERVERS.map((srv) => {
-    const valid = validServers.find((v) => v.id === srv.id);
-    return valid || srv;
-  });
+  // Server 3 (AutoEmbed Cloud HD): verified if AutoEmbed is reachable
+  if (isAutoembedOk) {
+    validServers.push({
+      id: "server3",
+      name: "Server 3 (AutoEmbed Cloud HD)",
+      badge: "Clean HD",
+      description: "Direct cloud backup stream without interruptions",
+    });
+  }
+
+  // Server 4 (2Embed Cloud Backup): verified if 2Embed is reachable
+  if (is2embedOk) {
+    validServers.push({
+      id: "server4",
+      name: "Server 4 (2Embed Cloud Backup)",
+      badge: "Fast HD",
+      description: "Global cloud stream backup",
+    });
+  }
+
+  // Only return verified, genuinely available servers. Fallback to Server 1 default only if empty.
+  const finalServers = validServers.length > 0 ? validServers : [AVAILABLE_SERVERS[0]];
 
   availableServersCache.set(cacheKey, {
     data: finalServers,

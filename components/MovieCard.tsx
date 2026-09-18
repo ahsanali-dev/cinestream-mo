@@ -2,6 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useWatchlist } from '@/lib/watchlist';
+import { useQuickView } from '@/context/QuickViewContext';
 
 interface MovieCardProps {
   id: string | number;
@@ -21,6 +22,7 @@ interface MovieCardProps {
 const MovieCard = (props: MovieCardProps) => {
   const { id, title, name, poster_path, image, vote_average, rating, release_date, first_air_date, year, media_type, overview } = props;
   const { isSaved, toggle } = useWatchlist();
+  const { openQuickView } = useQuickView();
   
   const displayTitle = title || name || "Unknown Title";
   const displayImage = poster_path ? `https://image.tmdb.org/t/p/w500${poster_path}` : (image || "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=2000");
@@ -29,6 +31,13 @@ const MovieCard = (props: MovieCardProps) => {
 
   const type = media_type || (name || first_air_date ? 'tv' : 'movie');
   const inWatchlist = isSaved(id);
+
+  const cleanSlug = displayTitle
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+  const watchUrl = `/watch/${cleanSlug}?type=${type}`;
 
   const handleWatchlistClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -50,7 +59,25 @@ const MovieCard = (props: MovieCardProps) => {
 
   return (
     <Link 
-      href={`/watch/${id}?type=${type}`}
+      href={watchUrl}
+      onClick={(e) => {
+        if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+          e.preventDefault();
+          openQuickView({
+            id,
+            title: displayTitle,
+            name: displayTitle,
+            poster_path,
+            image: displayImage,
+            vote_average,
+            release_date,
+            first_air_date,
+            year: displayYear,
+            media_type: type,
+            overview,
+          });
+        }
+      }}
       className="group block cursor-pointer"
     >
       <div className="relative aspect-2/3 overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-[1.03] group-hover:border-accent/40 group-hover:shadow-[0_20px_40px_rgba(231,76,60,0.2)]">
@@ -75,7 +102,7 @@ const MovieCard = (props: MovieCardProps) => {
         </button>
         
         {/* Hover Overlay */}
-        <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black via-black/40 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none">
+        <div className="hidden md:flex absolute inset-0 flex-col justify-end bg-gradient-to-t from-black via-black/40 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none">
            <div className="flex items-center gap-2 mb-2">
               <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-black uppercase text-white">4K UHD</span>
               <span className="text-[10px] font-bold text-white/60">{displayYear}</span>

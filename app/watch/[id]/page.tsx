@@ -8,16 +8,15 @@ import { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ type?: string; t?: string; s?: string; e?: string }>;
+  searchParams: Promise<{ type?: string; t?: string; s?: string; e?: string; play?: string }>;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   try {
     const { id: rawId } = await params;
-    const id = rawId.split("-")[0];
     const { type = "movie" } = await searchParams;
     
-    const movie = await getMovieDetails(id, type as "movie" | "tv");
+    const movie = await getMovieDetails(rawId, type as "movie" | "tv");
     
     if (!movie) {
       return {
@@ -41,7 +40,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       : "https://cinestream-mo.vercel.app/icon-512x512.png";
 
     const cleanSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const canonicalPath = `/watch/${id}-${cleanSlug}?type=${type}`;
+    const canonicalPath = `/watch/${cleanSlug}?type=${type}`;
     const watchUrl = `https://cinestream-mo.vercel.app${canonicalPath}`;
     const ogImageUrl = `https://cinestream-mo.vercel.app/api/og?title=${encodeURIComponent(title)}&year=${encodeURIComponent(rawYear)}&rating=${encodeURIComponent(movie.vote_average ? movie.vote_average.toFixed(1) : "8.5")}&type=${type}&image=${encodeURIComponent(primaryImage)}`;
 
@@ -96,13 +95,13 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 
 export default async function WatchPage({ params, searchParams }: PageProps) {
   const { id: rawId } = await params;
-  const id = rawId.split("-")[0];
-  const { type = "movie", t, s, e } = await searchParams;
+  const { type = "movie", t, s, e, play } = await searchParams;
   const initialTime = t ? parseFloat(t) : undefined;
   const initialSeason = s ? parseInt(s, 10) : undefined;
   const initialEpisode = e ? parseInt(e, 10) : undefined;
+  const autoPlay = play === "1";
   
-  const movie = await getMovieDetails(id, type as "movie" | "tv");
+  const movie = await getMovieDetails(rawId, type as "movie" | "tv");
 
   if (!movie) {
     return (
@@ -119,12 +118,16 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
     );
   }
 
+  const id = String(movie.id);
+
+
+
   const title = movie.title || movie.name;
   const releaseDate = movie.release_date || movie.first_air_date;
   const year = releaseDate ? releaseDate.split("-")[0] : "N/A";
   const rating = movie.vote_average?.toFixed(1);
   const cleanSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const canonicalUrl = `https://cinestream-mo.vercel.app/watch/${id}-${cleanSlug}?type=${type}`;
+  const canonicalUrl = `https://cinestream-mo.vercel.app/watch/${cleanSlug}?type=${type}`;
 
   // Schema.org JSON-LD Structured Data for Google Rich Snippets
   const mediaSchema = {
@@ -273,7 +276,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
     : ["Witty", "Exciting", "Suspenseful", "Adventure", "Family", "Twists & Turns"];
 
   return (
-    <main className="min-h-screen bg-[#0a0a0b] pb-20">
+    <main className="min-h-screen bg-[#0a0a0b] pb-32 md:pb-24">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(mediaSchema) }}
@@ -312,10 +315,11 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         initialTime={initialTime}
         initialSeason={initialSeason}
         initialEpisode={initialEpisode}
+        autoPlay={autoPlay}
       />
 
       {/* Content Info & Tabs */}
-      <div className="px-6 md:px-16 pt-6 md:pt-8 space-y-6 watch-details">
+      <div className="px-4 sm:px-6 md:px-16 pt-4 sm:pt-6 md:pt-8 space-y-6 watch-details">
         {/* Title & Quick Actions Header */}
         <div className="space-y-3">
             <div className="flex items-center gap-2.5">
@@ -348,7 +352,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
                 )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap pt-1">
                 <WatchlistButton 
                   item={{
                     id,
@@ -366,7 +370,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
                   title={title}
                   text={`Watch ${title}${year !== "N/A" ? ` (${year})` : ""} in Full HD on CineStream! 🍿🎬`}
                   poster={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined}
-                  url={`https://cinestream-mo.vercel.app/watch/${id}?type=${type}`}
+                  url={`https://cinestream-mo.vercel.app/watch/${cleanSlug}?type=${type}`}
                 />
             </div>
         </div>

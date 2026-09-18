@@ -76,7 +76,7 @@ export default function ShareButton({ title, text, url, poster }: ShareButtonPro
     <div ref={menuRef} className="relative inline-block">
       <button
         onClick={handleShare}
-        className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-accent/40 hover:bg-white/10 text-white transition-all duration-300 cursor-pointer shadow-lg active:scale-95 group font-black italic uppercase tracking-wider text-xs md:text-sm"
+        className="flex items-center gap-2.5 px-4 py-2.5 sm:px-6 sm:py-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-accent/40 hover:bg-white/10 text-white transition-all duration-300 cursor-pointer shadow-lg active:scale-95 group font-black italic uppercase tracking-wider text-xs md:text-sm"
         aria-label="Share movie link"
       >
         <div className="h-7 w-7 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">

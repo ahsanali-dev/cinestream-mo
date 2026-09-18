@@ -12,6 +12,7 @@ import {
   getPreferredAudioLanguage,
   setPreferredAudioLanguage,
 } from "@/lib/languages";
+import { getWatchHistory, getSavedProgress, WatchHistoryItem } from "@/lib/watch-history";
 import AdFreePlayer from "./AdFreePlayer";
 
 interface Season {
@@ -41,6 +42,7 @@ interface PlayerContainerProps {
   initialTime?: number;
   initialSeason?: number;
   initialEpisode?: number;
+  autoPlay?: boolean;
 }
 
 interface StreamData {
@@ -99,6 +101,7 @@ export default function PlayerContainer({
   initialTime,
   initialSeason,
   initialEpisode,
+  autoPlay = false,
 }: PlayerContainerProps) {
   const router = useRouter();
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
@@ -128,16 +131,18 @@ export default function PlayerContainer({
     return `${m}m`;
   }, [runtime]);
 
-  // Cinema Mode Player Open State (auto-open if initialTime is passed)
-  const [isPlayerOpen, setIsPlayerOpen] = useState<boolean>(() => Boolean(initialTime && initialTime > 0));
+  // Cinema Mode Player Open State (auto-open ONLY when autoPlay is explicitly true)
+  const [isPlayerOpen, setIsPlayerOpen] = useState<boolean>(() => Boolean(autoPlay));
   const [mounted, setMounted] = useState<boolean>(false);
+  const [playheadTime, setPlayheadTime] = useState<number | undefined>(initialTime);
+  const [savedProgress, setSavedProgress] = useState<WatchHistoryItem | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    if (initialTime && initialTime > 0) {
+    if (autoPlay) {
       setIsPlayerOpen(true);
     }
-  }, [initialTime]);
+  }, [autoPlay]);
 
   // Direct Ad-Free Stream state
   const [directStream, setDirectStream] = useState<StreamData | null>(null);
@@ -186,6 +191,56 @@ export default function PlayerContainer({
     initialSeason || (activeSeasons.length > 0 ? activeSeasons[0].season_number : 1)
   );
   const [selectedEpisode, setSelectedEpisode] = useState<number>(initialEpisode || 1);
+
+  // Auto-detect last watched season & episode for TV shows if not explicitly provided in URL
+  useEffect(() => {
+    if (type !== "tv") return;
+    if (initialSeason) return;
+
+    try {
+      const history = getWatchHistory();
+      const lastWatched = history.find(
+        (item) => String(item.id) === String(id) && item.type === "tv"
+      );
+
+      if (lastWatched && lastWatched.season) {
+        setSelectedSeason(lastWatched.season);
+        if (lastWatched.episode) {
+          setSelectedEpisode(lastWatched.episode);
+        }
+      }
+    } catch (err) {
+      console.error("Error reading watch history for auto-select:", err);
+    }
+  }, [id, type, initialSeason]);
+
+  // Check saved progress for current title / episode
+  useEffect(() => {
+    try {
+      const progress = getSavedProgress(id, type, selectedSeason, selectedEpisode);
+      if (progress && progress.currentTime > 5 && progress.progressPercentage < 95) {
+        setSavedProgress(progress);
+        if (initialTime === undefined) {
+          setPlayheadTime(progress.currentTime);
+        }
+      } else {
+        setSavedProgress(null);
+      }
+    } catch (err) {
+      console.error("Error checking saved progress:", err);
+    }
+  }, [id, type, selectedSeason, selectedEpisode, initialTime]);
+
+  const formatProgressTime = (seconds: number) => {
+    const total = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
   const [episodesList, setEpisodesList] = useState<any[]>([]);
   const [isLoadingEpisodes, setIsLoadingEpisodes] = useState<boolean>(false);
 
@@ -476,6 +531,12 @@ export default function PlayerContainer({
 
   const handleEpisodeSelect = (episodeNum: number) => {
     setSelectedEpisode(episodeNum);
+    const prog = getSavedProgress(id, "tv", selectedSeason, episodeNum);
+    if (prog && prog.currentTime > 5 && prog.progressPercentage < 95) {
+      setPlayheadTime(prog.currentTime);
+    } else {
+      setPlayheadTime(0);
+    }
     setIsPlayerOpen(true);
   };
 
@@ -524,7 +585,7 @@ export default function PlayerContainer({
 
         <div
           onClick={() => setIsPlayerOpen(true)}
-          className="relative w-full aspect-video md:h-[75vh] bg-[#0c0c10] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-10 rounded-3xl overflow-hidden border border-white/10 group cursor-pointer flex flex-col justify-end p-6 md:p-12 select-none"
+          className="relative w-full h-64 sm:h-80 md:h-[75vh] bg-[#0c0c10] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-10 rounded-2xl sm:rounded-3xl overflow-hidden border border-white/10 group cursor-pointer flex flex-col justify-end p-4 sm:p-6 md:p-12 select-none"
         >
           {/* Background Poster Image */}
           {backdropPath && (
@@ -539,28 +600,71 @@ export default function PlayerContainer({
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20 group-hover:via-black/30 transition-all duration-500"></div>
 
           {/* Center Play Button with Pulsing Ring */}
-          <div className="absolute inset-0 m-auto flex flex-col items-center justify-center gap-4 text-center z-10">
+          <div className="absolute inset-0 m-auto flex flex-col items-center justify-center gap-2.5 sm:gap-4 text-center z-10 max-w-lg px-3 sm:px-4">
             <div className="relative flex items-center justify-center">
-              <span className="absolute w-20 h-20 md:w-28 md:h-28 rounded-full bg-accent/40 animate-ping"></span>
+              <span className="absolute w-14 h-14 sm:w-20 sm:h-20 md:w-28 md:h-28 rounded-full bg-accent/40 animate-ping"></span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (savedProgress) {
+                    setPlayheadTime(savedProgress.currentTime);
+                  }
                   setIsPlayerOpen(true);
                 }}
-                className="relative h-18 w-18 md:h-24 md:w-24 rounded-full bg-accent hover:bg-accent/90 text-white flex items-center justify-center text-3xl md:text-4xl shadow-[0_0_50px_rgba(231,76,60,0.7)] transition-all duration-300 group-hover:scale-110 cursor-pointer border-2 border-white/30 active:scale-95"
-                aria-label="Play Video"
+                className="relative h-13 w-13 sm:h-18 sm:w-18 md:h-24 md:w-24 rounded-full bg-accent hover:bg-accent/90 text-white flex items-center justify-center text-2xl sm:text-3xl md:text-4xl shadow-[0_0_50px_rgba(231,76,60,0.7)] transition-all duration-300 group-hover:scale-110 cursor-pointer border-2 border-white/30 active:scale-95"
+                aria-label={savedProgress ? "Resume Playback" : "Play Video"}
               >
-                <svg className="w-9 h-9 md:w-11 md:h-11 fill-current ml-1" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 sm:w-9 sm:h-9 md:w-11 md:h-11 fill-current ml-0.5 sm:ml-1" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </button>
             </div>
 
-            <div>
-              <h3 className="text-xl md:text-3xl font-black italic uppercase tracking-wider text-white drop-shadow-md">
-                {type === "tv" ? `Play Season ${selectedSeason} • Episode ${selectedEpisode}` : "Play Movie"}
+            <div className="space-y-2">
+              <h3 className="text-base sm:text-xl md:text-3xl font-black italic uppercase tracking-wider text-white drop-shadow-md">
+                {savedProgress
+                  ? type === "tv"
+                    ? `Resume S${selectedSeason} • E${selectedEpisode}`
+                    : "Resume Movie"
+                  : type === "tv"
+                  ? `Play Season ${selectedSeason} • Episode ${selectedEpisode}`
+                  : "Play Movie"}
               </h3>
+
+              {savedProgress && (
+                <div className="space-y-2 pt-1 animate-fade-in">
+                  <div className="flex items-center gap-2 justify-center flex-wrap">
+                    <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-md">
+                      Resume at {formatProgressTime(savedProgress.currentTime)}
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-bold text-white/70">
+                      ({savedProgress.progressPercentage}% completed)
+                    </span>
+                  </div>
+
+                  <div className="w-36 sm:w-64 h-1 sm:h-1.5 bg-white/20 rounded-full overflow-hidden mx-auto shadow-inner">
+                    <div
+                      className="h-full bg-red-600 rounded-full shadow-[0_0_10px_rgba(229,9,20,0.9)]"
+                      style={{ width: `${Math.min(100, Math.max(5, savedProgress.progressPercentage))}%` }}
+                    />
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPlayheadTime(0);
+                        setIsPlayerOpen(true);
+                      }}
+                      className="text-[11px] font-bold text-white/50 hover:text-white transition-colors uppercase tracking-wider underline underline-offset-4 cursor-pointer hover:scale-105 inline-block mt-1"
+                    >
+                      Start from Beginning (0:00)
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -641,7 +745,7 @@ export default function PlayerContainer({
                 episode={selectedEpisode}
                 posterPath={posterPath}
                 backdropPath={backdropPath}
-                initialTime={initialTime}
+                initialTime={playheadTime}
                 subtitles={directStream.subtitles}
                 audioTracks={directStream.audioTracks}
                 initialAudioLang={selectedLanguage}
@@ -661,10 +765,10 @@ export default function PlayerContainer({
       )}
 
       {/* Episode Controls on Watch Page & Audio Language Bar */}
-      <div className="px-6 md:px-16 space-y-8">
+      <div className="px-3 sm:px-6 md:px-16 space-y-6 sm:space-y-8">
 
         {/* Netflix-Style Movie Details & Languages (Images 2 & 3) */}
-        <div className="bg-[#0f0f12]/95 border border-white/10 rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl backdrop-blur-xl">
+        <div className="bg-[#0f0f12]/95 border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 shadow-2xl backdrop-blur-xl">
           {/* Top Line: Match %, Year, Duration, HD, Age Rating, Advisory */}
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-xs md:text-sm">
             <span className="text-emerald-400 font-black tracking-tight text-sm md:text-base">
@@ -700,7 +804,7 @@ export default function PlayerContainer({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap py-1">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 py-1">
                 {availableServers.map((srv) => {
                   const isSelected = selectedServer === srv.id;
                   return (
@@ -708,7 +812,7 @@ export default function PlayerContainer({
                       key={srv.id}
                       type="button"
                       onClick={() => setSelectedServer(srv.id)}
-                      className={`px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
+                      className={`px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 border ${
                         isSelected
                           ? "bg-accent/20 border-accent text-white shadow-lg shadow-accent/20"
                           : "bg-white/5 border-white/10 text-white/70 hover:text-white hover:bg-white/10"
@@ -877,7 +981,11 @@ export default function PlayerContainer({
                       runtime: null,
                       air_date: null,
                     }))
-                  ).map((episode, idx) => (
+                  ).map((episode, idx) => {
+                    const epProg = mounted ? getSavedProgress(id, "tv", selectedSeason, episode.episode_number) : null;
+                    const hasEpProgress = Boolean(epProg && epProg.currentTime > 5 && epProg.progressPercentage < 95);
+
+                    return (
                     <div
                       key={`ep-s${selectedSeason}-e${episode.episode_number}-${episode.id || idx}`}
                       onClick={() => handleEpisodeSelect(episode.episode_number)}
@@ -907,15 +1015,29 @@ export default function PlayerContainer({
                           </div>
                         </div>
 
-                        <div className="absolute top-2 left-2 md:top-3 md:left-3 px-2 py-0.5 md:py-1 bg-black/80 backdrop-blur-md rounded-lg text-[9px] md:text-[10px] font-black tracking-widest text-white uppercase border border-white/10">
+                        <div className="absolute top-2 left-2 md:top-3 md:left-3 px-2 py-0.5 md:py-1 bg-black/80 backdrop-blur-md rounded-lg text-[9px] md:text-[10px] font-black tracking-widest text-white uppercase border border-white/10 z-10">
                           Ep {episode.episode_number}
                         </div>
 
-                        {selectedEpisode === episode.episode_number && (
-                          <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 px-2 py-0.5 md:py-1 bg-accent rounded-lg text-[8px] md:text-[9px] font-black tracking-widest text-white uppercase shadow-lg shadow-accent/30 flex items-center gap-1">
-                            <span>Selected</span>
+                        {/* Red Progress Track for Episode */}
+                        {hasEpProgress && epProg && (
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-10">
+                            <div
+                              className="h-full bg-red-600 shadow-[0_0_8px_rgba(229,9,20,0.9)]"
+                              style={{ width: `${Math.min(100, Math.max(5, epProg.progressPercentage))}%` }}
+                            />
                           </div>
                         )}
+
+                        {selectedEpisode === episode.episode_number ? (
+                          <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 px-2 py-0.5 md:py-1 bg-accent rounded-lg text-[8px] md:text-[9px] font-black tracking-widest text-white uppercase shadow-lg shadow-accent/30 flex items-center gap-1 z-10">
+                            <span>{hasEpProgress && epProg ? `Resume (${formatProgressTime(epProg.currentTime)})` : "Selected"}</span>
+                          </div>
+                        ) : hasEpProgress && epProg ? (
+                          <div className="absolute bottom-2 right-2 md:bottom-3 md:right-3 px-2 py-0.5 md:py-1 bg-black/80 backdrop-blur-md border border-white/20 rounded-lg text-[8px] md:text-[9px] font-bold text-white/90 uppercase z-10">
+                            <span>{epProg.progressPercentage}%</span>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="p-2.5 md:p-4 flex-1 flex flex-col justify-between space-y-1.5 md:space-y-2">
@@ -950,7 +1072,8 @@ export default function PlayerContainer({
                         )}
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>

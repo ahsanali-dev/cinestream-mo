@@ -208,7 +208,7 @@ export default function Header() {
       <header
         className="fixed top-0 left-0 md:left-20 right-0 z-50 flex h-16 md:h-20 items-center justify-between px-4 sm:px-8 md:px-16 transition-all duration-500 bg-transparent border-b border-transparent"
       >
-        <Link href="/" className="md:hidden flex items-center gap-2 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95">
+        <Link href="/" className="md:hidden flex items-center gap-2 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95 outline-none focus:outline-none select-none">
           <img src="/logo.png" alt="CineStream" className="w-7 h-7 object-contain" />
           <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">CineStream</span>
         </Link>
