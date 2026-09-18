@@ -351,36 +351,38 @@ export default function PlayerContainer({
       rawList = serverLanguages;
     } else if (availableAudioTracks.length > 0) {
       rawList = availableAudioTracks;
-    } else if (spokenLanguages && spokenLanguages.length > 0) {
-      rawList = spokenLanguages.map((sl, idx) => {
-        const info = resolveLanguageInfo(sl.iso_639_1, sl.english_name || sl.name);
-        return {
-          id: `spoken_${sl.iso_639_1 || idx}`,
-          name: info.name,
-          code: info.code,
-          rawLabel: info.name,
-          rawLang: sl.iso_639_1 || "en",
+    } else {
+      // Default to genuine Original / English audio options (only verified audio tracks)
+      const origInfo = resolveLanguageInfo(originalLanguage, originalLanguage);
+      rawList = [
+        {
+          id: "s1_eng_def",
+          name: "English",
+          code: "ENG",
+          rawLabel: "English",
+          rawLang: "en",
+          serverId: selectedServer,
+          serverName: "Server 1 (CineStream Fast HD)",
+          serverBadge: "Fast HD",
+          provider: "CineStream Cloud Direct",
+          isDefault: !originalLanguage || originalLanguage === "en",
+        },
+      ];
+
+      if (origInfo.name && origInfo.name.toLowerCase() !== "english") {
+        rawList.push({
+          id: `s1_orig_${origInfo.code}`,
+          name: origInfo.name,
+          code: origInfo.code,
+          rawLabel: origInfo.name,
+          rawLang: originalLanguage || "und",
           serverId: selectedServer,
           serverName: "Original Audio",
           serverBadge: "Original",
           provider: "Original Master",
-          isDefault: idx === 0,
-        };
-      });
-    } else if (originalLanguage) {
-      const info = resolveLanguageInfo(originalLanguage, originalLanguage);
-      rawList = [{
-        id: "orig_lang",
-        name: info.name,
-        code: info.code,
-        rawLabel: info.name,
-        rawLang: originalLanguage,
-        serverId: selectedServer,
-        serverName: "Original Audio",
-        serverBadge: "Original",
-        provider: "Original Master",
-        isDefault: true,
-      }];
+          isDefault: true,
+        });
+      }
     }
 
     const seenNames = new Set<string>();
@@ -626,7 +628,7 @@ export default function PlayerContainer({
               </div>
             ) : (
               <AdFreePlayer
-                key={`adfree-player-${id}-${selectedSeason}-${selectedEpisode}-${selectedServer}-${selectedLanguage}`}
+                key={`adfree-player-${id}-${selectedSeason}-${selectedEpisode}-${selectedServer}`}
                 streamUrl={directStream.streamUrl || undefined}
                 embedUrl={directStream.embedUrl}
                 format={directStream.format}

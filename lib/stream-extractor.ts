@@ -66,6 +66,22 @@ export function proxifyUrl(targetUrl: string): string {
 
 let cachedNetMirrorBase: { url: string; expiresAt: number } | null = null;
 
+// Official dynamic mirror discovery endpoints pool extracted from NetMirror Android app
+const MOBIDETECT_POOLS = [
+  "https://mobidetect.art",
+  "https://mobidetects.cc",
+  "https://mobidetect.live",
+  "https://mobidetect.pro",
+  "https://mobidetect.shop",
+  "https://mobidetect.vip",
+  "https://mobidetect.xyz",
+  "https://mobidetects.info",
+  "https://mobidetects.pro",
+  "https://mobidetects.xyz",
+  "https://mobidetects.live",
+  "https://mobidetects.art",
+];
+
 export async function getActiveNetMirrorBase(): Promise<string> {
   if (cachedNetMirrorBase && cachedNetMirrorBase.expiresAt > Date.now()) {
     return cachedNetMirrorBase.url;
@@ -76,29 +92,31 @@ export async function getActiveNetMirrorBase(): Promise<string> {
     "https://net27.cc",
   ];
 
-  try {
-    const res = await fetch("https://mobidetect.art/check.php?platform=android", {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
-        Accept: "application/json",
-      },
-      signal: AbortSignal.timeout(4000),
-    });
+  for (const endpoint of MOBIDETECT_POOLS) {
+    try {
+      const res = await fetch(`${endpoint}/check.php?platform=android`, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(2500),
+      });
 
-    if (res.ok) {
-      const data = await res.json().catch(() => null);
-      if (data?.token_hash) {
-        const decoded = Buffer.from(data.token_hash, "base64").toString("utf-8");
-        const origin = new URL(decoded).origin;
-        if (origin.startsWith("http")) {
-          cachedNetMirrorBase = { url: origin, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
-          return origin;
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.token_hash) {
+          const decoded = Buffer.from(data.token_hash, "base64").toString("utf-8");
+          const origin = new URL(decoded).origin;
+          if (origin.startsWith("http")) {
+            cachedNetMirrorBase = { url: origin, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
+            return origin;
+          }
         }
       }
+    } catch {
+      // Continue to next mirror pool endpoint
     }
-  } catch {
-    // Fallback on network error
   }
 
   cachedNetMirrorBase = { url: fallbackDomains[0], expiresAt: Date.now() + 30 * 60 * 1000 };
@@ -679,6 +697,7 @@ export async function probeAllServerLanguages(
   const seenKeys = new Set<string>();
 
   const addTrack = (item: ServerLanguageItem) => {
+    if (!item.name || item.name.toLowerCase() === "unknown" || item.code === "UND") return;
     const key = `${item.name}`.toLowerCase();
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
@@ -732,34 +751,19 @@ export async function probeAllServerLanguages(
     }
   }
 
-  // 3. Fallback: Verify Hindi dubbing availability via TMDB translations
+  // Genuine Original Hindi audio handling (e.g. Bollywood/Indian content)
   const isOriginalHindi = origLang === "hi" || origLang === "hin";
-  if (!seenKeys.has("hindi")) {
-    try {
-      const tmdbKey = process.env.NEXT_PUBLIC_TMDB_API_KEY || "5245a1d2be9af4eb9394a1546fbe5de3";
-      const transRes = await fetch(
-        `https://api.themoviedb.org/3/${type}/${tmdbId}/translations?api_key=${tmdbKey}`,
-        { signal: AbortSignal.timeout(2500) }
-      );
-      if (transRes.ok) {
-        const transData = await transRes.json().catch(() => null);
-        const hasHindi = transData?.translations?.some(
-          (t: any) => t.iso_639_1 === "hi"
-        );
-        if (hasHindi) {
-          addTrack({
-            id: `tmdb_hin_${aggregated.length}`,
-            name: "Hindi",
-            code: "HIN",
-            serverId: "server2",
-            serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
-            serverBadge: "Hindi Dubbed HD",
-            provider: "Multi-Audio Cloud Stream",
-            isDefault: isOriginalHindi,
-          });
-        }
-      }
-    } catch {}
+  if (isOriginalHindi && !seenKeys.has("hindi")) {
+    addTrack({
+      id: "orig_hin_def",
+      name: "Hindi",
+      code: "HIN",
+      serverId: "server1",
+      serverName: "Server 1 (CineStream Fast HD)",
+      serverBadge: "Original Audio",
+      provider: "CineStream Cloud Direct",
+      isDefault: true,
+    });
   }
 
   // Always ensure English audio option is available

@@ -266,6 +266,26 @@ export default function AdFreePlayer({
     }
   }, [audioTracks]);
 
+  // Dynamic audio track switching when initialAudioLang changes from parent without remounting
+  useEffect(() => {
+    if (!initialAudioLang || !hlsRef.current) return;
+    const hls = hlsRef.current;
+    if (!hls.audioTracks || hls.audioTracks.length === 0) return;
+
+    const targetIdx = hls.audioTracks.findIndex((t) =>
+      isLanguageMatch(initialAudioLang, { lang: t.lang, name: t.name })
+    );
+
+    if (targetIdx >= 0 && hls.audioTrack !== targetIdx) {
+      hls.audioTrack = targetIdx;
+      setActiveAudioTrack(targetIdx);
+      const chosenLang = cleanLanguageName(hls.audioTracks[targetIdx].name || hls.audioTracks[targetIdx].lang);
+      setPreferredAudioLanguage(chosenLang);
+      setLanguageNotice(`Audio: ${chosenLang}`);
+      setTimeout(() => setLanguageNotice(null), 3000);
+    }
+  }, [initialAudioLang]);
+
   // Check saved watch progress on load
   useEffect(() => {
     if (initialTime && initialTime > 5) {
@@ -498,6 +518,12 @@ export default function AdFreePlayer({
           });
           setParsedAudioTracks(tracks);
 
+          // If a valid audio track is already active, preserve it to prevent unwanted resets
+          if (typeof hls.audioTrack === "number" && hls.audioTrack >= 0 && hls.audioTrack < data.audioTracks.length) {
+            setActiveAudioTrack(hls.audioTrack);
+            return;
+          }
+
           const savedPref = getPreferredAudioLanguage();
           const targetLang = initialAudioLang || savedPref || "English";
           let targetIdx = -1;
@@ -513,11 +539,9 @@ export default function AdFreePlayer({
                 t.name?.toLowerCase().includes("english")
             );
           }
-          if (targetIdx >= 0 && hls.audioTrack !== targetIdx) {
+          if (targetIdx >= 0) {
             hls.audioTrack = targetIdx;
             setActiveAudioTrack(targetIdx);
-          } else if (typeof hls.audioTrack === "number" && hls.audioTrack >= 0) {
-            setActiveAudioTrack(hls.audioTrack);
           }
         }
       });
