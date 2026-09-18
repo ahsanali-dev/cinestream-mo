@@ -48,27 +48,27 @@ export default function WatchTabs({
   const [activeTab, setActiveTab] = useState<"recommended" | "details">("recommended");
 
   return (
-    <div className="space-y-8">
-      {/* Sleek Modern Glassmorphic Tab Bar */}
-      <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+    <div className="space-y-6">
+      {/* Clean Underline Tab Navigation Bar */}
+      <div className="flex items-center gap-8 sm:gap-12 border-b border-white/10 mb-8">
         {/* Tab 1: Recommended */}
         <button
           type="button"
           onClick={() => setActiveTab("recommended")}
-          className={`relative px-6 py-3 rounded-2xl text-xs sm:text-sm font-black italic uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer select-none ${
+          className={`relative pb-4 text-sm sm:text-base font-black italic uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer select-none border-b-2 -mb-[2px] ${
             activeTab === "recommended"
-              ? "bg-accent text-white shadow-xl shadow-accent/25 scale-[1.02]"
-              : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5"
+              ? "border-accent text-white"
+              : "border-transparent text-white/40 hover:text-white/80"
           }`}
         >
           <i className="ph-bold ph-sparkle text-base"></i>
           <span>Recommended</span>
           {recommendations.length > 0 && (
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              className={`ml-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
                 activeTab === "recommended"
-                  ? "bg-black/30 text-white"
-                  : "bg-white/10 text-white/70"
+                  ? "bg-accent/20 text-accent border border-accent/30"
+                  : "bg-white/5 text-white/40 border border-white/5"
               }`}
             >
               {recommendations.length}
@@ -80,30 +80,24 @@ export default function WatchTabs({
         <button
           type="button"
           onClick={() => setActiveTab("details")}
-          className={`relative px-6 py-3 rounded-2xl text-xs sm:text-sm font-black italic uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer select-none ${
+          className={`relative pb-4 text-sm sm:text-base font-black italic uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer select-none border-b-2 -mb-[2px] ${
             activeTab === "details"
-              ? "bg-accent text-white shadow-xl shadow-accent/25 scale-[1.02]"
-              : "bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5"
+              ? "border-accent text-white"
+              : "border-transparent text-white/40 hover:text-white/80"
           }`}
         >
           <i className="ph-bold ph-info text-base"></i>
-          <span>Details & Cast</span>
+          <span>Details &amp; Cast</span>
         </button>
       </div>
 
       {/* Tab 1 Content: Recommended */}
       {activeTab === "recommended" && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tight text-white flex items-center gap-2.5">
-                <span>Recommended For You</span>
-                <span className="hidden sm:inline-block text-xs font-bold text-white/40 tracking-widest normal-case">
-                  • Based on {title}
-                </span>
-              </h2>
-              <div className="h-1 w-20 bg-accent rounded-full"></div>
-            </div>
+          <div className="flex items-center justify-between pb-2">
+            <p className="text-xs sm:text-sm font-bold text-white/50">
+              More titles similar to <span className="text-white font-black italic">{title}</span>
+            </p>
 
             <Link
               href="/explore"
@@ -143,15 +137,15 @@ export default function WatchTabs({
 
       {/* Tab 2 Content: Details & Cast */}
       {activeTab === "details" && (
-        <div className="flex flex-col lg:flex-row gap-12 animate-fadeIn">
+        <div className="flex flex-col lg:flex-row gap-12 animate-fadeIn pt-2">
           {/* Main Info Column */}
           <div className="flex-1 space-y-8">
-            {/* Overview */}
+            {/* Storyline / Overview */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div className="h-6 w-1 bg-accent rounded-full"></div>
                 <h3 className="text-base md:text-lg font-black italic uppercase tracking-widest text-white">
-                  Storyline & Overview
+                  Storyline &amp; Overview
                 </h3>
               </div>
               <p className="text-base md:text-lg text-[#a0a0a0] leading-relaxed max-w-4xl font-medium antialiased">
