@@ -315,40 +315,40 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
       />
 
       {/* Content Info & Tabs */}
-      <div className="px-6 md:px-16 pt-10 md:pt-14 space-y-10 watch-details">
+      <div className="px-6 md:px-16 pt-6 md:pt-8 space-y-6 watch-details">
         {/* Title & Quick Actions Header */}
-        <div className="space-y-4">
-            <div className="flex items-center gap-3">
-                <span className="bg-accent px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest italic shadow-lg shadow-accent/20">Now Playing</span>
-                <span className="text-white/40 font-bold text-sm tracking-widest uppercase">{type}</span>
+        <div className="space-y-3">
+            <div className="flex items-center gap-2.5">
+                <span className="bg-accent px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest italic shadow-md shadow-accent/20">Now Playing</span>
+                <span className="text-white/40 font-bold text-xs tracking-widest uppercase">{type}</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-tight">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white leading-snug">
                 {title}
             </h1>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-sm md:text-base font-bold text-white/60">
-                <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 px-3 py-1.5 rounded-lg border border-yellow-500/20">
-                    <i className="ph-fill ph-star"></i>
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-semibold text-white/60">
+                <div className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-2.5 py-1 rounded-md border border-yellow-500/20">
+                    <i className="ph-fill ph-star text-xs"></i>
                     <span>{rating}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-                    <i className="ph-bold ph-calendar"></i>
+                <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
+                    <i className="ph-bold ph-calendar text-xs"></i>
                     <span>{year}</span>
                 </div>
                 {movie.runtime && (
-                    <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-                        <i className="ph-bold ph-clock"></i>
+                    <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
+                        <i className="ph-bold ph-clock text-xs"></i>
                         <span>{movie.runtime}m</span>
                     </div>
                 )}
                 {movie.spoken_languages && movie.spoken_languages.length > 0 && (
-                    <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-                        <i className="ph-bold ph-globe"></i>
+                    <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
+                        <i className="ph-bold ph-globe text-xs"></i>
                         <span className="capitalize">{movie.spoken_languages.map((l: any) => l.english_name || l.name).slice(0, 2).join(", ")}</span>
                     </div>
                 )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
                 <WatchlistButton 
                   item={{
                     id,

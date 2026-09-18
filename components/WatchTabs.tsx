@@ -49,45 +49,32 @@ export default function WatchTabs({
 
   return (
     <div className="space-y-6">
-      {/* Clean Underline Tab Navigation Bar */}
-      <div className="flex items-center gap-8 sm:gap-12 border-b border-white/10 mb-8">
+      {/* Clean Underline Tab Navigation Bar (No icons, pure elegant text) */}
+      <div className="flex items-center gap-8 sm:gap-10 border-b border-white/10 mb-6">
         {/* Tab 1: Recommended */}
         <button
           type="button"
           onClick={() => setActiveTab("recommended")}
-          className={`relative pb-4 text-sm sm:text-base font-black italic uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer select-none border-b-2 -mb-[2px] ${
+          className={`relative pb-3.5 text-xs sm:text-sm font-black italic uppercase tracking-wider transition-all cursor-pointer select-none border-b-2 -mb-[2px] ${
             activeTab === "recommended"
               ? "border-accent text-white"
               : "border-transparent text-white/40 hover:text-white/80"
           }`}
         >
-          <i className="ph-bold ph-sparkle text-base"></i>
-          <span>Recommended</span>
-          {recommendations.length > 0 && (
-            <span
-              className={`ml-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                activeTab === "recommended"
-                  ? "bg-accent/20 text-accent border border-accent/30"
-                  : "bg-white/5 text-white/40 border border-white/5"
-              }`}
-            >
-              {recommendations.length}
-            </span>
-          )}
+          Recommended
         </button>
 
         {/* Tab 2: Details */}
         <button
           type="button"
           onClick={() => setActiveTab("details")}
-          className={`relative pb-4 text-sm sm:text-base font-black italic uppercase tracking-wider transition-all flex items-center gap-2.5 cursor-pointer select-none border-b-2 -mb-[2px] ${
+          className={`relative pb-3.5 text-xs sm:text-sm font-black italic uppercase tracking-wider transition-all cursor-pointer select-none border-b-2 -mb-[2px] ${
             activeTab === "details"
               ? "border-accent text-white"
               : "border-transparent text-white/40 hover:text-white/80"
           }`}
         >
-          <i className="ph-bold ph-info text-base"></i>
-          <span>Details &amp; Cast</span>
+          Details &amp; Cast
         </button>
       </div>
 
