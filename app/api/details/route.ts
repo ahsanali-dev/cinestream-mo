@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMovieDetails } from "@/lib/tmdb";
+import { getMovieDetails, extractMediaSource } from "@/lib/tmdb";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +66,11 @@ export async function GET(request: NextRequest) {
       media_type: r.media_type || type,
     }));
 
+    const trailer = movie.videos?.results?.find(
+      (v: any) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")
+    ) || movie.videos?.results?.find((v: any) => v.site === "YouTube");
+    const trailerKey = trailer?.key || null;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -88,6 +93,8 @@ export async function GET(request: NextRequest) {
         original_language: movie.original_language,
         recommendations,
         type,
+        trailerKey,
+        source: extractMediaSource(movie),
       },
     });
   } catch (error: any) {

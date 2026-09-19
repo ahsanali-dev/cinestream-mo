@@ -1,9 +1,6 @@
-import { getMovieDetails } from "@/lib/tmdb";
+import { getMovieDetails, extractMediaSource } from "@/lib/tmdb";
 import Link from "next/link";
 import PlayerContainer from "@/components/PlayerContainer";
-import WatchTabs from "@/components/WatchTabs";
-import WatchlistButton from "@/components/WatchlistButton";
-import ShareButton from "@/components/ShareButton";
 import { Metadata } from "next";
 
 interface PageProps {
@@ -275,6 +272,11 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
     ? moodKeywords 
     : ["Witty", "Exciting", "Suspenseful", "Adventure", "Family", "Twists & Turns"];
 
+  const trailer = movie.videos?.results?.find(
+    (v: any) => v.site === "YouTube" && (v.type === "Trailer" || v.type === "Teaser")
+  ) || movie.videos?.results?.find((v: any) => v.site === "YouTube");
+  const trailerKey = trailer?.key || null;
+
   return (
     <main className="min-h-screen bg-[#0a0a0b] pb-32 md:pb-24">
       <script
@@ -316,81 +318,15 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         initialSeason={initialSeason}
         initialEpisode={initialEpisode}
         autoPlay={autoPlay}
+        recommendations={movie.recommendations?.results || []}
+        creditsCast={movie.credits?.cast || []}
+        director={movie.credits?.crew?.find((c: any) => c.job === "Director")?.name || (type === "tv" ? movie.created_by?.[0]?.name : undefined)}
+        releaseDate={releaseDate}
+        status={movie.status}
+        cleanSlug={cleanSlug}
+        trailerKey={trailerKey}
+        source={extractMediaSource(movie)}
       />
-
-      {/* Content Info & Tabs */}
-      <div className="px-4 sm:px-6 md:px-16 pt-4 sm:pt-6 md:pt-8 space-y-6 watch-details">
-        {/* Title & Quick Actions Header */}
-        <div className="space-y-3">
-            <div className="flex items-center gap-2.5">
-                <span className="bg-accent px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest italic shadow-md shadow-accent/20">Now Playing</span>
-                <span className="text-white/40 font-bold text-xs tracking-widest uppercase">{type}</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white leading-snug">
-                {title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-semibold text-white/60">
-                <div className="flex items-center gap-1.5 text-yellow-500 bg-yellow-500/10 px-2.5 py-1 rounded-md border border-yellow-500/20">
-                    <i className="ph-fill ph-star text-xs"></i>
-                    <span>{rating}</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
-                    <i className="ph-bold ph-calendar text-xs"></i>
-                    <span>{year}</span>
-                </div>
-                {movie.runtime && (
-                    <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
-                        <i className="ph-bold ph-clock text-xs"></i>
-                        <span>{movie.runtime}m</span>
-                    </div>
-                )}
-                {movie.spoken_languages && movie.spoken_languages.length > 0 && (
-                    <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md border border-white/10">
-                        <i className="ph-bold ph-globe text-xs"></i>
-                        <span className="capitalize">{movie.spoken_languages.map((l: any) => l.english_name || l.name).slice(0, 2).join(", ")}</span>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap pt-1">
-                <WatchlistButton 
-                  item={{
-                    id,
-                    title,
-                    name: title,
-                    poster_path: movie.poster_path,
-                    image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-                    vote_average: movie.vote_average,
-                    release_date: movie.release_date || movie.first_air_date,
-                    media_type: type as "movie" | "tv",
-                    overview: movie.overview,
-                  }}
-                />
-                <ShareButton 
-                  title={title}
-                  text={`Watch ${title}${year !== "N/A" ? ` (${year})` : ""} in Full HD on CineStream! 🍿🎬`}
-                  poster={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined}
-                  url={`https://cinestream-mo.vercel.app/watch/${cleanSlug}?type=${type}`}
-                />
-            </div>
-        </div>
-
-        {/* 2 Tabs: Tab 1 (Recommended), Tab 2 (Details) */}
-        <WatchTabs
-          overview={movie.overview}
-          genres={movie.genres}
-          cast={movie.credits?.cast}
-          director={movie.credits?.crew?.find((c: any) => c.job === "Director")?.name || (type === "tv" ? movie.created_by?.[0]?.name : undefined)}
-          originalLanguage={movie.original_language}
-          releaseDate={releaseDate}
-          runtime={movie.runtime}
-          status={movie.status}
-          recommendations={movie.recommendations?.results || []}
-          type={type as "movie" | "tv"}
-          title={title}
-        />
-      </div>
-
     </main>
   );
 }

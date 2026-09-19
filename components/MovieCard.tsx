@@ -3,6 +3,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useWatchlist } from '@/lib/watchlist';
 import { useQuickView } from '@/context/QuickViewContext';
+import { getSourceBadgeStyle, MediaSource } from '@/lib/tmdb';
 
 interface MovieCardProps {
   id: string | number;
@@ -17,10 +18,13 @@ interface MovieCardProps {
   year?: string | number;
   media_type?: 'movie' | 'tv';
   overview?: string;
+  source?: MediaSource | { name: string; logo?: string | null } | string | null;
+  network?: string;
+  provider?: string;
 }
 
 const MovieCard = (props: MovieCardProps) => {
-  const { id, title, name, poster_path, image, vote_average, rating, release_date, first_air_date, year, media_type, overview } = props;
+  const { id, title, name, poster_path, image, vote_average, rating, release_date, first_air_date, year, media_type, overview, source, network, provider } = props;
   const { isSaved, toggle } = useWatchlist();
   const { openQuickView } = useQuickView();
   
@@ -31,6 +35,10 @@ const MovieCard = (props: MovieCardProps) => {
 
   const type = media_type || (name || first_air_date ? 'tv' : 'movie');
   const inWatchlist = isSaved(id);
+
+  // Extract source name and styling
+  const sourceName = typeof source === "string" ? source : (source?.name || network || provider || null);
+  const sourceStyle = sourceName ? getSourceBadgeStyle(sourceName) : null;
 
   const cleanSlug = displayTitle
     .toLowerCase()
@@ -88,17 +96,29 @@ const MovieCard = (props: MovieCardProps) => {
           loading="lazy"
         />
 
-        {/* Watchlist Quick Button */}
+        {/* Streaming Source / Network Badge at Top Left */}
+        {sourceStyle && (
+          <div
+            className={`absolute left-2 top-2 z-10 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-1 border transition-all duration-300 group-hover:scale-105 select-none ${sourceStyle.bg} ${sourceStyle.border} ${sourceStyle.text} ${sourceStyle.glow}`}
+          >
+            {sourceStyle.isNetflix ? (
+              <span className="text-[10px] font-black tracking-tighter">N</span>
+            ) : null}
+            <span className="truncate max-w-[70px]">{sourceStyle.badgeText}</span>
+          </div>
+        )}
+
+        {/* Watchlist Quick Button (repositioned neatly below badge when badge is present) */}
         <button
           onClick={handleWatchlistClick}
           aria-label={inWatchlist ? "Remove from watchlist" : "Add to watchlist"}
-          className={`absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-xl backdrop-blur-md border transition-all duration-300 ${
+          className={`absolute ${sourceStyle ? "left-2 top-8" : "left-2 top-2"} z-20 flex h-7 w-7 items-center justify-center rounded-lg backdrop-blur-md border transition-all duration-300 ${
             inWatchlist
               ? "bg-accent border-accent text-white shadow-lg shadow-accent/40 scale-100 opacity-100"
               : "bg-black/60 border-white/10 text-white/70 hover:text-white hover:bg-black/90 hover:scale-110 opacity-0 group-hover:opacity-100"
           }`}
         >
-          <i className={`${inWatchlist ? "ph-fill ph-heart text-white text-base" : "ph-bold ph-heart text-sm"}`}></i>
+          <i className={`${inWatchlist ? "ph-fill ph-heart text-white text-sm" : "ph-bold ph-heart text-xs"}`}></i>
         </button>
         
         {/* Hover Overlay */}

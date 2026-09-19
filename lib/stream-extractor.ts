@@ -52,8 +52,12 @@ const netMirrorCache = new Map<string, { data: StreamData | null; expiresAt: num
 const netMirrorInFlight = new Map<string, Promise<StreamData | null>>();
 const vixSrcInFlight = new Map<string, Promise<StreamData | null>>();
 
-const DEFAULT_NETMIRROR_BASE = "https://net52.cc";
+const DEFAULT_NETMIRROR_BASE = "https://net77.cc";
 const NET27_REFERER = "https://videodownloader.site/";
+
+export const NETMIRROR_AUTH_TOKEN =
+  process.env.NETMIRROR_COOKIE ||
+  "14840b2ca5ff6340cc40594ea2b47171%3A%3Adb15a6012f2c06027ce4d0b198f5acca%3A%3A1789689641%3A%3Akp%3A%3Ap";
 
 export const CF_WORKER_PROXY =
   process.env.CLOUDFLARE_WORKER_PROXY_URL ||
@@ -83,44 +87,7 @@ const MOBIDETECT_POOLS = [
 ];
 
 export async function getActiveNetMirrorBase(): Promise<string> {
-  if (cachedNetMirrorBase && cachedNetMirrorBase.expiresAt > Date.now()) {
-    return cachedNetMirrorBase.url;
-  }
-
-  const fallbackDomains = [
-    "https://net52.cc",
-    "https://net27.cc",
-  ];
-
-  for (const endpoint of MOBIDETECT_POOLS) {
-    try {
-      const res = await fetch(`${endpoint}/check.php?platform=android`, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(2500),
-      });
-
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (data?.token_hash) {
-          const decoded = Buffer.from(data.token_hash, "base64").toString("utf-8");
-          const origin = new URL(decoded).origin;
-          if (origin.startsWith("http")) {
-            cachedNetMirrorBase = { url: origin, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
-            return origin;
-          }
-        }
-      }
-    } catch {
-      // Continue to next mirror pool endpoint
-    }
-  }
-
-  cachedNetMirrorBase = { url: fallbackDomains[0], expiresAt: Date.now() + 30 * 60 * 1000 };
-  return fallbackDomains[0];
+  return "https://net77.cc";
 }
 
 const VIXSRC_BASE = "https://vixsrc.to";
@@ -274,7 +241,11 @@ async function extractNetMirrorEmbed(
 
       if (!title) return null;
 
-      const fetchNM = (u: string, init?: RequestInit) => {
+      const fetchNM = async (u: string, init?: RequestInit) => {
+        try {
+          const directRes = await fetch(u, init);
+          if (directRes.ok) return directRes;
+        } catch {}
         const proxied = proxifyUrl(u);
         return fetch(proxied, init);
       };
@@ -317,27 +288,58 @@ async function extractNetMirrorEmbed(
       let targetNetId = match.id;
       if (type === "tv") {
         try {
-          const epRes = await fetchNM(`${netMirrorBase}/episodes.php?s=${match.id}&season=${season}`, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
-              Referer: `${netMirrorBase}/mobile/home?app=1`,
-            },
+          const authHeaders = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Cookie": `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+            "Referer": `${netMirrorBase}/home`,
+          };
+
+          // Step 1: Query post.php to resolve real season container ID
+          const postRes = await fetchNM(`${netMirrorBase}/post.php?id=${match.id}`, {
+            headers: authHeaders,
             signal: AbortSignal.timeout(4000),
           });
-          if (epRes.ok) {
-            const epData = await epRes.json().catch(() => null);
-            if (Array.isArray(epData.episodes) && epData.episodes[episode - 1]) {
-              targetNetId = epData.episodes[episode - 1].id || targetNetId;
+
+          if (postRes.ok) {
+            const postData = await postRes.json().catch(() => null);
+            if (postData && Array.isArray(postData.season)) {
+              const matchedSeason =
+                postData.season.find((s: any) => String(s.s) === String(season)) ||
+                postData.season[0];
+              const seasonId = matchedSeason?.id;
+
+              if (seasonId) {
+                // Step 2: Query episodes.php with Season ID to get episode IDs
+                const epRes = await fetchNM(`${netMirrorBase}/episodes.php?s=${seasonId}`, {
+                  headers: authHeaders,
+                  signal: AbortSignal.timeout(4000),
+                });
+
+                if (epRes.ok) {
+                  const epData = await epRes.json().catch(() => null);
+                  if (epData && Array.isArray(epData.episodes)) {
+                    const matchedEp =
+                      epData.episodes.find((e: any) => String(e.ep) === String(episode)) ||
+                      epData.episodes[episode - 1];
+                    if (matchedEp?.id) {
+                      targetNetId = String(matchedEp.id);
+                    }
+                  }
+                }
+              }
             }
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[NetMirror] TV episode resolution error:", e);
+        }
       }
 
       // 3. Fetch Playlist from NetMirror
       const plRes = await fetchNM(`${netMirrorBase}/playlist.php?id=${targetNetId}`, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
-          Referer: `${netMirrorBase}/mobile/home?app=1`,
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Cookie: `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+          Referer: `${netMirrorBase}/home`,
         },
         signal: AbortSignal.timeout(4000),
       });
@@ -365,7 +367,8 @@ async function extractNetMirrorEmbed(
       const manifestRes = await fetchNM(masterPlaylistUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          Referer: `${netMirrorBase}/`,
+          Cookie: `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+          Referer: `${netMirrorBase}/home`,
         },
         signal: AbortSignal.timeout(4000),
       });
@@ -398,7 +401,8 @@ async function extractNetMirrorEmbed(
           const childRes = await fetchNM(fullChildUrl, {
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              Referer: `${netMirrorBase}/`,
+              Cookie: `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+              Referer: `${netMirrorBase}/home`,
             },
             signal: AbortSignal.timeout(4000),
           });
@@ -442,11 +446,20 @@ async function extractNetMirrorEmbed(
           const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
           const info = resolveLanguageInfo(rawLang, rawLabel);
           if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
+
+          let cleanUri = uri;
+          if (cleanUri) {
+            cleanUri = cleanUri.replace(/nm-cdn([0-9]+)\.top/g, "freecdn$1.top");
+            if (cleanUri.startsWith("https:///")) {
+              cleanUri = cleanUri.replace("https:///", `${netMirrorBase}/`);
+            }
+          }
+
           audioTracks.push({
             label: info.name,
             lang: info.code,
             default: line.includes("DEFAULT=YES"),
-            url: uri,
+            url: cleanUri,
           });
         }
       }

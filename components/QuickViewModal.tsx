@@ -7,7 +7,14 @@ import { useRouter } from "next/navigation";
 import { useQuickView } from "@/context/QuickViewContext";
 import { useWatchlist } from "@/lib/watchlist";
 import { getSavedProgress, getWatchHistory } from "@/lib/watch-history";
-import { getTVShowEpisodes } from "@/lib/tmdb";
+import { getTVShowEpisodes, getSourceBadgeStyle } from "@/lib/tmdb";
+import {
+  resolveLanguageInfo,
+  isLanguageMatch,
+  cleanLanguageName,
+  getPreferredAudioLanguage,
+  setPreferredAudioLanguage,
+} from "@/lib/languages";
 
 export default function QuickViewModal() {
   const router = useRouter();
@@ -21,8 +28,14 @@ export default function QuickViewModal() {
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [savedProgress, setSavedProgress] = useState<any>(null);
   const [availableServers, setAvailableServers] = useState<any[]>([]);
+  const [availableLanguages, setAvailableLanguages] = useState<any[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [isTrailerOpen, setIsTrailerOpen] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
+  const audioScrollRef = useRef<HTMLDivElement>(null);
 
   const id = activeItem?.id ? String(activeItem.id) : "";
   const type = activeItem?.type || activeItem?.media_type || (activeItem?.name || activeItem?.first_air_date ? "tv" : "movie");
@@ -39,6 +52,7 @@ export default function QuickViewModal() {
 
   useEffect(() => {
     setActiveTab(type === "tv" ? "episodes" : "more_like_this");
+    setIsTrailerOpen(false);
   }, [type, activeItem]);
 
   // Fetch full details when modal opens
@@ -74,13 +88,18 @@ export default function QuickViewModal() {
       }
     };
 
-    // Probe available servers
+    // Probe available servers and audio languages
     const fetchServers = async () => {
       try {
-        const res = await fetch(`/api/stream?id=${id}&type=${type}&season=1&episode=1`);
+        const res = await fetch(`/api/stream?id=${id}&type=${type}&season=${selectedSeason}&episode=1`);
         const data = await res.json().catch(() => null);
-        if (isMounted && Array.isArray(data?.availableServers)) {
-          setAvailableServers(data.availableServers);
+        if (isMounted) {
+          if (Array.isArray(data?.availableServers)) {
+            setAvailableServers(data.availableServers);
+          }
+          if (Array.isArray(data?.availableLanguages)) {
+            setAvailableLanguages(data.availableLanguages);
+          }
         }
       } catch {
         // Fallback
@@ -93,7 +112,7 @@ export default function QuickViewModal() {
     return () => {
       isMounted = false;
     };
-  }, [isOpen, id, type]);
+  }, [isOpen, id, type, selectedSeason]);
 
   // Check saved progress for current title
   useEffect(() => {
@@ -138,6 +157,147 @@ export default function QuickViewModal() {
     };
   }, [id, type, selectedSeason, isOpen]);
 
+  // Deduplicated clean audio languages
+  const cleanLanguages = React.useMemo(() => {
+    const list: { id: string; name: string; code: string; serverId?: string }[] = [];
+    const seen = new Set<string>();
+
+    if (availableLanguages && availableLanguages.length > 0) {
+      for (const lang of availableLanguages) {
+        const clean = cleanLanguageName(lang.name);
+        const key = clean.toLowerCase().trim();
+        if (!key || key === "unknown" || seen.has(key)) continue;
+        seen.add(key);
+        list.push({
+          id: lang.id || `lang_${key}`,
+          name: clean,
+          code: lang.code || "ENG",
+          serverId: lang.serverId,
+        });
+      }
+    } else if (details?.spoken_languages && details.spoken_languages.length > 0) {
+      for (const sl of details.spoken_languages) {
+        const raw = sl.english_name || sl.name || "English";
+        const clean = cleanLanguageName(raw);
+        const key = clean.toLowerCase().trim();
+        if (!key || key === "unknown" || seen.has(key)) continue;
+        seen.add(key);
+        list.push({
+          id: `sl_${key}`,
+          name: clean,
+          code: sl.iso_639_1?.toUpperCase() || "ENG",
+        });
+      }
+    } else if (details) {
+      list.push({
+        id: "default_audio",
+        name: "English",
+        code: "ENG",
+      });
+    }
+
+    return list;
+  }, [availableLanguages, details]);
+
+  // Sync selected language with user preference
+  useEffect(() => {
+    const preferred = getPreferredAudioLanguage();
+    if (cleanLanguages.length > 0) {
+      const match = preferred
+        ? cleanLanguages.find((l) =>
+          isLanguageMatch(preferred, { label: l.name, lang: l.code })
+        )
+        : null;
+      if (match) {
+        setSelectedLanguage(match.name);
+      } else if (!selectedLanguage) {
+        setSelectedLanguage(cleanLanguages[0].name);
+      }
+    } else if (preferred && !selectedLanguage) {
+      setSelectedLanguage(preferred);
+    }
+  }, [cleanLanguages, selectedLanguage]);
+
+  const handleSelectLanguage = (langName: string) => {
+    setSelectedLanguage(langName);
+    setPreferredAudioLanguage(langName);
+  };
+
+  // Horizontal scroll controls for audio languages
+  const checkAudioScroll = React.useCallback(() => {
+    const el = audioScrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 5);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 5);
+  }, []);
+
+  useEffect(() => {
+    const el = audioScrollRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY * 1.2;
+      }
+    };
+
+    checkAudioScroll();
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("scroll", checkAudioScroll, { passive: true });
+    window.addEventListener("resize", checkAudioScroll);
+
+    const timer = setTimeout(checkAudioScroll, 200);
+
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("scroll", checkAudioScroll);
+      window.removeEventListener("resize", checkAudioScroll);
+      clearTimeout(timer);
+    };
+  }, [checkAudioScroll, cleanLanguages]);
+
+  // Mouse Drag to Scroll
+  const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startScrollLeftRef = useRef(0);
+  const hasMovedRef = useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!audioScrollRef.current) return;
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    startXRef.current = e.pageX - audioScrollRef.current.offsetLeft;
+    startScrollLeftRef.current = audioScrollRef.current.scrollLeft;
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current || !audioScrollRef.current) return;
+      const x = e.pageX - audioScrollRef.current.offsetLeft;
+      const walk = x - startXRef.current;
+      if (Math.abs(walk) > 4) {
+        hasMovedRef.current = true;
+      }
+      audioScrollRef.current.scrollLeft = startScrollLeftRef.current - walk;
+    };
+
+    const onMouseUp = () => {
+      isDraggingRef.current = false;
+      setTimeout(() => {
+        hasMovedRef.current = false;
+      }, 50);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
@@ -156,8 +316,8 @@ export default function QuickViewModal() {
   const imageSrc = backdrop
     ? `https://image.tmdb.org/t/p/w1280${backdrop}`
     : activeItem.poster_path
-    ? `https://image.tmdb.org/t/p/w780${activeItem.poster_path}`
-    : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200";
+      ? `https://image.tmdb.org/t/p/w780${activeItem.poster_path}`
+      : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?q=80&w=1200";
 
   const releaseYear = details?.releaseYear || activeItem.release_date?.split("-")[0] || activeItem.first_air_date?.split("-")[0] || activeItem.year || "2024";
   const rating = details?.vote_average ? details.vote_average.toFixed(1) : activeItem.vote_average ? activeItem.vote_average.toFixed(1) : "8.5";
@@ -182,9 +342,9 @@ export default function QuickViewModal() {
   const handlePlayDirect = (seasonNum = 1, episodeNum = 1) => {
     dismissModal();
     const resumeTime = savedProgress?.currentTime ? Math.floor(savedProgress.currentTime) : 0;
-    const watchLink = `/watch/${cleanSlug}?type=${type}${
-      type === "tv" ? `&s=${seasonNum}&e=${episodeNum}` : ""
-    }${resumeTime > 0 ? `&t=${resumeTime}` : ""}&play=1`;
+    const langParam = selectedLanguage ? `&lang=${encodeURIComponent(selectedLanguage)}` : "";
+    const watchLink = `/watch/${cleanSlug}?type=${type}${type === "tv" ? `&s=${seasonNum}&e=${episodeNum}` : ""
+      }${resumeTime > 0 ? `&t=${resumeTime}` : ""}${langParam}&play=1`;
     router.push(watchLink);
   };
 
@@ -193,7 +353,8 @@ export default function QuickViewModal() {
     e.preventDefault();
     e.stopPropagation();
     dismissModal();
-    router.push(`/watch/${cleanSlug}?type=${type}`);
+    const langParam = selectedLanguage ? `&lang=${encodeURIComponent(selectedLanguage)}` : "";
+    router.push(`/watch/${cleanSlug}?type=${type}${langParam}`);
   };
 
   const handleWatchlistClick = (e: React.MouseEvent) => {
@@ -225,90 +386,150 @@ export default function QuickViewModal() {
     >
       <div
         ref={modalRef}
-        className="w-full sm:max-w-4xl bg-[#111116] border-t sm:border border-white/10 rounded-t-[28px] sm:rounded-3xl overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.95)] max-h-[92dvh] sm:max-h-[90vh] h-[92dvh] sm:h-auto flex flex-col relative text-white animate-fade-in"
+        className="w-full sm:max-w-4xl bg-[#111116] border-t sm:border border-white/10 rounded-t-[28px] sm:rounded-3xl overflow-y-auto custom-scrollbar shadow-[0_30px_90px_rgba(0,0,0,0.95)] max-h-[92dvh] sm:max-h-[90vh] flex flex-col relative text-white animate-fade-in"
       >
         {/* Mobile Pull Indicator */}
-        <div className="sm:hidden absolute top-2.5 left-1/2 -translate-x-1/2 z-40 w-10 h-1 bg-white/30 rounded-full pointer-events-none" />
+        <div className="sm:hidden sticky top-2.5 left-1/2 -translate-x-1/2 z-50 w-10 h-1 bg-white/30 rounded-full pointer-events-none mx-auto -mb-3.5" />
 
-        {/* Top Right Close Button */}
-        <button
-          type="button"
-          onClick={closeQuickView}
-          className="absolute top-3 right-3 sm:top-4 sm:right-4 h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-black/75 hover:bg-red-600 text-white flex items-center justify-center cursor-pointer border border-white/20 transition-all z-40 shadow-lg group hover:scale-105 active:scale-95"
-          title="Close (Esc)"
-          aria-label="Close modal"
-        >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        {/* Top Sticky Close Button */}
+        <div className="sticky top-0 z-50 flex justify-end pointer-events-none p-3 sm:p-4 -mb-12 sm:-mb-14">
+          <button
+            type="button"
+            onClick={closeQuickView}
+            className="pointer-events-auto h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-black/80 hover:bg-red-600 text-white flex items-center justify-center cursor-pointer border border-white/20 transition-all shadow-xl group hover:scale-105 active:scale-95 backdrop-blur-md"
+            title="Close (Esc)"
+            aria-label="Close modal"
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
         {/* Top Hero Banner Section */}
-        <div className="relative w-full h-52 sm:h-80 md:h-96 shrink-0 overflow-hidden bg-black">
-          <img
-            src={imageSrc}
-            alt={displayTitle}
-            className="w-full h-full object-cover object-center opacity-70"
-          />
-
-          {/* Vignette Gradients */}
-          <div className="absolute inset-0 bg-linear-to-t from-[#111116] via-[#111116]/50 to-transparent"></div>
-          <div className="absolute inset-0 bg-linear-to-r from-[#111116]/90 via-[#111116]/30 to-transparent"></div>
-
-          {/* Hero Bottom Info & Action Buttons */}
-          <div className="absolute bottom-3.5 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 space-y-2.5 sm:space-y-4 z-20">
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white drop-shadow-md line-clamp-1 sm:line-clamp-2">
-              {displayTitle}
-            </h2>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              {/* Primary Play / Resume Button */}
+        <div className="relative w-full h-56 sm:h-80 md:h-96 shrink-0 overflow-hidden bg-black">
+          {isTrailerOpen && details?.trailerKey ? (
+            <div className="absolute inset-0 z-30 bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${details.trailerKey}?autoplay=1&rel=0&modestbranding=1`}
+                title={`${displayTitle} Trailer`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
               <button
                 type="button"
-                onClick={() => handlePlayDirect(selectedSeason, 1)}
-                className="px-4 py-2 sm:px-7 sm:py-3 rounded-xl sm:rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black italic uppercase text-xs sm:text-sm tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-[0_0_25px_rgba(229,9,20,0.8)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer border border-red-400/40 shrink-0"
+                onClick={() => setIsTrailerOpen(false)}
+                className="absolute top-3 right-14 sm:top-4 sm:right-16 px-3 py-1.5 rounded-full bg-black/80 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer z-40 backdrop-blur-md shadow-lg"
               >
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                <span>{savedProgress ? `Resume (${formatProgressTime(savedProgress.currentTime)})` : "Play Now"}</span>
-              </button>
-
-              {/* Watchlist Bookmark */}
-              <button
-                type="button"
-                onClick={handleWatchlistClick}
-                className={`h-8.5 w-8.5 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl border flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                  inWatchlist
-                    ? "bg-red-600/20 border-red-500 text-red-500 shadow-[0_0_15px_rgba(229,9,20,0.3)]"
-                    : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
-                }`}
-                title={inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
-                aria-label="Toggle Watchlist"
-              >
-                <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${inWatchlist ? "fill-current" : "none"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
-
-              {/* View Full Watch Page Button */}
-              <button
-                type="button"
-                onClick={handleGoToFullPage}
-                className="px-3.5 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all hover:border-white/40 cursor-pointer active:scale-95 shrink-0"
-                title="View Full Watch Page with All Details"
-              >
-                <span>Full Page</span>
-                <svg className="w-3.5 h-3.5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                <span>Close Trailer</span>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-          </div>
+          ) : (
+            <>
+              <img
+                src={imageSrc}
+                alt={displayTitle}
+                className="w-full h-full object-cover object-center opacity-70"
+              />
+
+              {/* Vignette Gradients */}
+              <div className="absolute inset-0 bg-linear-to-t from-[#111116] via-[#111116]/50 to-transparent"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-[#111116]/90 via-[#111116]/30 to-transparent"></div>
+
+              {/* Hero Bottom Info & Action Buttons */}
+              <div className="absolute bottom-3.5 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 space-y-2.5 sm:space-y-4 z-20">
+                {details?.source && (
+                  <div className="flex items-center gap-2 animate-fade-in">
+                    <div
+                      className={`px-2.5 py-0.5 rounded-md text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 border shadow-lg select-none ${
+                        getSourceBadgeStyle(details.source.name).bg
+                      } ${getSourceBadgeStyle(details.source.name).border} ${
+                        getSourceBadgeStyle(details.source.name).text
+                      } ${getSourceBadgeStyle(details.source.name).glow}`}
+                    >
+                      {getSourceBadgeStyle(details.source.name).isNetflix ? (
+                        <span className="text-[11px] font-black tracking-tighter">N</span>
+                      ) : null}
+                      <span>{getSourceBadgeStyle(details.source.name).badgeText}</span>
+                    </div>
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white/60">
+                      {type === "tv" ? "Original Series" : "Featured Release"}
+                    </span>
+                  </div>
+                )}
+
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-black italic uppercase tracking-tight text-white drop-shadow-md line-clamp-1 sm:line-clamp-2">
+                  {displayTitle}
+                </h2>
+
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                  {/* Primary Play / Resume Button */}
+                  <button
+                    type="button"
+                    onClick={() => handlePlayDirect(selectedSeason, 1)}
+                    className="px-4 py-2 sm:px-7 sm:py-3 rounded-xl sm:rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black italic uppercase text-xs sm:text-sm tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-[0_0_25px_rgba(229,9,20,0.8)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer border border-red-400/40 shrink-0"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span>{savedProgress ? `Resume (${formatProgressTime(savedProgress.currentTime)})` : "Play Now"}</span>
+                  </button>
+
+                  {/* Watch Official Trailer Button */}
+                  {details?.trailerKey && (
+                    <button
+                      type="button"
+                      onClick={() => setIsTrailerOpen(true)}
+                      className="px-3.5 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all hover:border-white/40 cursor-pointer active:scale-95 shrink-0"
+                      title="Watch Official Trailer"
+                    >
+                      <svg className="w-3.5 h-3.5 text-red-500 fill-current" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      <span>Trailer</span>
+                    </button>
+                  )}
+
+                  {/* Watchlist Bookmark */}
+                  <button
+                    type="button"
+                    onClick={handleWatchlistClick}
+                    className={`h-8.5 w-8.5 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl border flex items-center justify-center transition-all cursor-pointer shrink-0 ${inWatchlist
+                        ? "bg-red-600/20 border-red-500 text-red-500 shadow-[0_0_15px_rgba(229,9,20,0.3)]"
+                        : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
+                      }`}
+                    title={inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+                    aria-label="Toggle Watchlist"
+                  >
+                    <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${inWatchlist ? "fill-current" : "none"}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  </button>
+
+                  {/* View Full Watch Page Button */}
+                  <button
+                    type="button"
+                    onClick={handleGoToFullPage}
+                    className="px-3.5 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all hover:border-white/40 cursor-pointer active:scale-95 shrink-0"
+                    title="View Full Watch Page with All Details"
+                  >
+                    <span>Full Page</span>
+                    <svg className="w-3.5 h-3.5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Modal Body Details */}
-        <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 flex-1 overflow-y-auto custom-scrollbar">
+        <div className="p-4 sm:p-8 space-y-4 sm:space-y-6">
           {/* Metadata Line */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs">
             <span className="text-emerald-400 font-black tracking-tight text-xs sm:text-sm">
@@ -335,7 +556,7 @@ export default function QuickViewModal() {
           </p>
 
           {/* Active Stream Servers */}
-          {availableServers.length > 0 && (
+          {/* {availableServers.length > 0 && (
             <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-white/50 flex items-center gap-1.5 sm:gap-2">
@@ -359,6 +580,59 @@ export default function QuickViewModal() {
                 ))}
               </div>
             </div>
+          )} */}
+
+          {/* Clean Audio Languages Selector - Pure Language Names Only */}
+          {cleanLanguages.length > 0 && (
+            <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-white/50 flex items-center gap-1.5 sm:gap-2">
+                  <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
+                  Select Audio Language ({cleanLanguages.length} Available)
+                </span>
+                {selectedLanguage && (
+                  <span className="text-[9px] sm:text-[10px] font-bold text-accent bg-accent/10 px-2.5 py-0.5 rounded-full border border-accent/20">
+                    Active: {cleanLanguageName(selectedLanguage)}
+                  </span>
+                )}
+              </div>
+
+              {/* Scrollable Audio Tracks Row with Simple Overflow Scroll Bar */}
+              <div
+                ref={audioScrollRef}
+                onMouseDown={handleMouseDown}
+                className="flex items-center gap-4 sm:gap-6 horizontal-scrollbar py-2 px-1 pb-3 select-none"
+              >
+                {cleanLanguages.map((track) => {
+                  const isSelected = isLanguageMatch(selectedLanguage, {
+                    label: track.name,
+                    lang: track.code,
+                  });
+
+                  return (
+                    <button
+                      key={track.id}
+                      type="button"
+                      data-active={isSelected ? "true" : undefined}
+                      onClick={(e) => {
+                        if (hasMovedRef.current) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          return;
+                        }
+                        handleSelectLanguage(track.name);
+                      }}
+                      className={`relative shrink-0 pb-2 text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${isSelected
+                          ? "text-white font-black text-xs sm:text-sm after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                          : "text-white/60 hover:text-white"
+                        }`}
+                    >
+                      <span>{cleanLanguageName(track.name)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {/* TAB NAVIGATION HEADER (Netflix Style Underline Tabs) */}
@@ -367,11 +641,10 @@ export default function QuickViewModal() {
               <button
                 type="button"
                 onClick={() => setActiveTab("episodes")}
-                className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${
-                  activeTab === "episodes"
+                className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${activeTab === "episodes"
                     ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
                     : "text-white/50 hover:text-white"
-                }`}
+                  }`}
               >
                 Episodes
               </button>
@@ -380,11 +653,10 @@ export default function QuickViewModal() {
             <button
               type="button"
               onClick={() => setActiveTab("more_like_this")}
-              className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${
-                activeTab === "more_like_this"
+              className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${activeTab === "more_like_this"
                   ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
                   : "text-white/50 hover:text-white"
-              }`}
+                }`}
             >
               More Like This
             </button>
@@ -392,11 +664,10 @@ export default function QuickViewModal() {
             <button
               type="button"
               onClick={() => setActiveTab("details")}
-              className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${
-                activeTab === "details"
+              className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${activeTab === "details"
                   ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
                   : "text-white/50 hover:text-white"
-              }`}
+                }`}
             >
               Details & Cast
             </button>

@@ -1,6 +1,6 @@
 import React from 'react';
-import MovieCard from '@/components/MovieCard';
-import { getTrendingMovies, getPopularTVSeries, getByGenre, getByLanguage, GENRE_IDS, LANGUAGE_CODES } from '@/lib/tmdb';
+import ExploreGrid from '@/components/ExploreGrid';
+import { getTrendingMovies, getPopularTVSeries, getByGenre, getByLanguage, enrichWithPlatform, GENRE_IDS, LANGUAGE_CODES } from '@/lib/tmdb';
 import { Metadata } from 'next';
 
 interface ExplorePageProps {
@@ -85,18 +85,18 @@ export default async function ViewAllPage({ params }: ExplorePageProps) {
   let subtitle = "Discover our handpicked selection of titles. Stream the latest hits in high quality.";
 
   if (type === 'trending') {
-    movies = await getTrendingMovies();
+    movies = await getTrendingMovies().then(enrichWithPlatform);
     title = "Trending Movies";
   } else if (type === 'tv') {
-    movies = await getPopularTVSeries();
+    movies = await getPopularTVSeries().then(enrichWithPlatform);
     title = "Popular TV Shows";
   } else if (type === 'genre' && subType) {
     const genreId = GENRE_IDS[subType as keyof typeof GENRE_IDS];
-    movies = genreId ? await getByGenre(genreId) : [];
+    movies = genreId ? await getByGenre(genreId).then(enrichWithPlatform) : [];
     title = `${subType} Collection`;
   } else if ((type === 'language' || type === 'lang') && subType) {
     const lang = resolveLanguageInfo(subType);
-    movies = await getByLanguage(lang.code);
+    movies = await getByLanguage(lang.code).then(enrichWithPlatform);
     title = `${lang.label}`;
     subtitle = `Enjoy top-rated ${lang.label} cinema and latest releases in high definition.`;
   }
@@ -128,20 +128,7 @@ export default async function ViewAllPage({ params }: ExplorePageProps) {
         <p className="text-[#a0a0a0] max-w-2xl font-medium">{subtitle}</p>
       </div>
 
-      {movies.length > 0 ? (
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
-          {movies.map((movie: any) => (
-            <div key={movie.id} className="animate-fade-in">
-                <MovieCard {...movie} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-40">
-           <i className="ph-fill ph-monitor-play text-8xl text-white/5 mb-6"></i>
-           <p className="text-xl font-bold text-[#a0a0a0]">No content found for this category</p>
-        </div>
-      )}
+      <ExploreGrid initialMovies={movies} type={type} subType={subType} />
     </div>
   );
 }
