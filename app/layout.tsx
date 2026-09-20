@@ -5,6 +5,8 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import Header from "@/components/Header";
 import PWARegistration from "@/components/PWARegistration";
+import { QuickViewProvider } from "@/context/QuickViewContext";
+import QuickViewModal from "@/components/QuickViewModal";
 
 export const viewport: Viewport = {
   themeColor: "#0a0a0b",
@@ -163,13 +165,16 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }}
         />
         <Script src="https://unpkg.com/@phosphor-icons/web" strategy="afterInteractive" />
-        <PWARegistration />
-        <Sidebar />
-        <Header />
-        <div className="flex-1 md:ml-20 w-full overflow-x-hidden pb-16 md:pb-0 pt-20">
-          {children}
-        </div>
-        <BottomNav />
+        <QuickViewProvider>
+          <PWARegistration />
+          <Sidebar />
+          <Header />
+          <div className="flex-1 md:ml-20 w-full overflow-x-hidden pb-16 md:pb-0 pt-20">
+            {children}
+          </div>
+          <BottomNav />
+          <QuickViewModal />
+        </QuickViewProvider>
       </body>
     </html>
   );

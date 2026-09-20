@@ -112,6 +112,7 @@ export default function AdFreePlayer({
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [videoFit, setVideoFit] = useState<"contain" | "cover">("contain");
   const [showControls, setShowControls] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -119,6 +120,7 @@ export default function AdFreePlayer({
   // Settings & Menus
   const [qualities, setQualities] = useState<{ label: string; index: number }[]>([]);
   const [currentQuality, setCurrentQuality] = useState<number>(-1); // -1 = Auto
+  const [activeLiveLevel, setActiveLiveLevel] = useState<number>(-1);
   const [activeSubtitle, setActiveSubtitle] = useState<number>(-1); // -1 = Off
   const [parsedAudioTracks, setParsedAudioTracks] = useState<{ label: string; lang: string; index: number }[]>(
     () =>
@@ -553,6 +555,7 @@ export default function AdFreePlayer({
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+        setActiveLiveLevel(data.level);
         if (hls.autoLevelEnabled) {
           setCurrentQuality(-1);
         } else {
@@ -1056,7 +1059,7 @@ export default function AdFreePlayer({
           </div>
         </div>
 
-        {/* Embedded Video Iframe */}
+        {/* Embedded Video Iframe (Sandbox disabled to allow third-party streaming providers like VixSrc/VidSrc to play without 'Sandbox not allowed' error) */}
         <iframe
           key={activeEmbedUrl}
           src={activeEmbedUrl}
@@ -1098,7 +1101,7 @@ export default function AdFreePlayer({
         }}
         onPause={() => setIsPlaying(false)}
         playsInline
-        className="w-full h-full object-contain cursor-pointer"
+        className={`w-full h-full ${videoFit === "cover" ? "object-cover" : "object-contain"} cursor-pointer transition-all duration-300`}
       >
         {subtitles.map((sub, idx) => (
           <track
@@ -1238,23 +1241,50 @@ export default function AdFreePlayer({
           )}
         </div>
 
-        {/* Close Player Cross Button (✕) */}
-        {onClose && (
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Quick Fullscreen Toggle Button in Header */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onClose();
+              toggleFullscreen();
             }}
-            className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-red-600 border border-white/15 hover:border-red-500 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
-            title="Close Player (Esc)"
-            aria-label="Close player"
+            className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
+            title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
+            aria-label="Toggle Fullscreen"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            {isFullscreen ? (
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 14h6v6m10-10h-6V4m0 16h6v-6M4 4h6v6" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <polyline points="15 3 21 3 21 9" />
+                <polyline points="9 21 3 21 3 15" />
+                <line x1="21" y1="3" x2="14" y2="10" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
+            )}
           </button>
-        )}
+
+          {/* Close Player Cross Button (✕) */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-red-600 border border-white/15 hover:border-red-500 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
+              title="Close Player (Esc)"
+              aria-label="Close player"
+            >
+              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* NetMirror / Netflix Style Settings & Tracks Tabbed Modal */}
@@ -1399,7 +1429,11 @@ export default function AdFreePlayer({
                 )}
                 <span className="text-sm tracking-wide">Auto</span>
                 <span className="ml-3 text-xs opacity-80 font-normal">
-                  {qualities.length > 0 ? qualities[0].label : "1080p"}
+                  {currentQuality === -1 && activeLiveLevel >= 0 && qualities[activeLiveLevel]
+                    ? qualities[activeLiveLevel].label
+                    : qualities.length > 0
+                    ? qualities[qualities.length - 1].label
+                    : "1080p"}
                 </span>
               </button>
 
@@ -1658,7 +1692,7 @@ export default function AdFreePlayer({
       {/* Bottom Controls Bar */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`absolute bottom-0 left-0 right-0 px-4 md:px-8 pb-3 pt-8 z-30 bg-gradient-to-t from-black/95 via-black/80 to-transparent transition-all duration-300 space-y-2 ${
+        className={`absolute bottom-0 left-0 right-0 px-3 sm:px-6 md:px-8 pb-[max(env(safe-area-inset-bottom,0px),12px)] pt-8 z-30 bg-gradient-to-t from-black/95 via-black/80 to-transparent transition-all duration-300 space-y-2 ${
           showControls || !isPlaying
             ? "opacity-100 translate-y-0 pointer-events-auto"
             : "opacity-0 translate-y-2 pointer-events-none"
@@ -1700,9 +1734,9 @@ export default function AdFreePlayer({
         </div>
 
         {/* Action Controls Row */}
-        <div className="flex items-center justify-between text-white select-none py-1">
-          {/* Left Actions: Play/Pause, Rewind 10s, Forward 10s, Volume, Time */}
-          <div className="flex items-center gap-3 sm:gap-4 md:gap-5 shrink-0">
+        <div className="flex items-center justify-between text-white select-none py-1 gap-1 sm:gap-2">
+          {/* Left Actions: Play/Pause, Rewind 10s, Forward 10s, Volume (Desktop), Time */}
+          <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4 min-w-0">
             {/* Play/Pause Button */}
             <button
               type="button"
@@ -1794,8 +1828,8 @@ export default function AdFreePlayer({
               </svg>
             </button>
 
-            {/* Volume + Slider */}
-            <div className="flex items-center gap-2 group/vol">
+            {/* Volume + Slider (Desktop only - mobile uses hardware buttons) */}
+            <div className="hidden md:flex items-center gap-2 group/vol shrink-0">
               <button
                 type="button"
                 onClick={toggleMute}
@@ -1826,14 +1860,34 @@ export default function AdFreePlayer({
             </div>
 
             {/* Time Display */}
-            <span className="text-[11px] sm:text-xs font-semibold text-white/90 tracking-wider whitespace-nowrap ml-1 font-mono">
+            <span className="text-[10px] sm:text-xs font-semibold text-white/90 tracking-tight sm:tracking-wider whitespace-nowrap ml-0.5 sm:ml-1 font-mono shrink-0">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
 
-          {/* Right Actions: Settings ⚙, Fullscreen ⤢ */}
-          <div className="flex items-center gap-3 sm:gap-4 md:gap-5 shrink-0">
+          {/* Right Actions: Fit/Fill toggle, Settings ⚙, Fullscreen ⤢ */}
+          <div className="flex items-center gap-1 sm:gap-3 md:gap-4 shrink-0 ml-auto">
+            {/* Screen Fit / Fill (Zoom to fill mobile screen) */}
+            <button
+              type="button"
+              onClick={() => setVideoFit((f) => (f === "contain" ? "cover" : "contain"))}
+              className={`p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer flex items-center justify-center shrink-0 ${
+                videoFit === "cover" ? "text-accent" : "text-white/80 hover:text-white"
+              }`}
+              title={videoFit === "cover" ? "Original Aspect (Fit)" : "Fill Screen (Zoom)"}
+              aria-label="Toggle Fit or Fill"
+            >
+              {videoFit === "cover" ? (
+                <svg className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0l5 0m-5 0l0 5m11 0l5-5m0 0l-5 0m5 0l0 5M9 15l-5 5m0 0l5 0m-5 0l0-5m11 0l5 5m0 0l-5 0m5 0l0-5" />
+                </svg>
+              ) : (
+                <svg className="w-4.5 h-4.5 sm:w-5 sm:h-5 md:w-6 md:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
+            </button>
 
             {/* Settings Gear (Quality Tab) */}
             <button

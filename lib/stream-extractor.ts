@@ -52,10 +52,16 @@ const netMirrorCache = new Map<string, { data: StreamData | null; expiresAt: num
 const netMirrorInFlight = new Map<string, Promise<StreamData | null>>();
 const vixSrcInFlight = new Map<string, Promise<StreamData | null>>();
 
-const DEFAULT_NETMIRROR_BASE = "https://net52.cc";
+const DEFAULT_NETMIRROR_BASE = "https://net77.cc";
 const NET27_REFERER = "https://videodownloader.site/";
 
+export const NETMIRROR_AUTH_TOKEN =
+  process.env.NETMIRROR_COOKIE ||
+  "14840b2ca5ff6340cc40594ea2b47171%3A%3Adb15a6012f2c06027ce4d0b198f5acca%3A%3A1789689641%3A%3Akp%3A%3Ap";
+
 export const CF_WORKER_PROXY =
+  process.env.STREAM_PROXY_URL ||
+  process.env.DENO_PROXY_URL ||
   process.env.CLOUDFLARE_WORKER_PROXY_URL ||
   "https://cinestream-proxy.ahsan-dev98.workers.dev";
 
@@ -83,44 +89,7 @@ const MOBIDETECT_POOLS = [
 ];
 
 export async function getActiveNetMirrorBase(): Promise<string> {
-  if (cachedNetMirrorBase && cachedNetMirrorBase.expiresAt > Date.now()) {
-    return cachedNetMirrorBase.url;
-  }
-
-  const fallbackDomains = [
-    "https://net52.cc",
-    "https://net27.cc",
-  ];
-
-  for (const endpoint of MOBIDETECT_POOLS) {
-    try {
-      const res = await fetch(`${endpoint}/check.php?platform=android`, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(2500),
-      });
-
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (data?.token_hash) {
-          const decoded = Buffer.from(data.token_hash, "base64").toString("utf-8");
-          const origin = new URL(decoded).origin;
-          if (origin.startsWith("http")) {
-            cachedNetMirrorBase = { url: origin, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
-            return origin;
-          }
-        }
-      }
-    } catch {
-      // Continue to next mirror pool endpoint
-    }
-  }
-
-  cachedNetMirrorBase = { url: fallbackDomains[0], expiresAt: Date.now() + 30 * 60 * 1000 };
-  return fallbackDomains[0];
+  return "https://net77.cc";
 }
 
 const VIXSRC_BASE = "https://vixsrc.to";
@@ -149,15 +118,15 @@ export const AVAILABLE_SERVERS: ServerOption[] = [
   },
   {
     id: "server2",
-    name: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
-    badge: "Hindi Dubbed HD",
-    description: "Direct stream with multi-language & Hindi dubs",
+    name: "Server 2 (MultiEmbed VIP HD)",
+    badge: "MultiEmbed HD",
+    description: "Ultra-reliable VIP streaming server with multi-subtitles",
   },
   {
     id: "server3",
-    name: "Server 3 (VidLink 1080p Stream)",
-    badge: "1080p Fast",
-    description: "1080p stream with multi-subtitles and auto-next",
+    name: "Server 3 (AutoEmbed Cloud HD)",
+    badge: "Clean HD",
+    description: "Direct cloud backup stream without interruptions",
   },
   {
     id: "server4",
@@ -167,7 +136,7 @@ export const AVAILABLE_SERVERS: ServerOption[] = [
   },
   {
     id: "server5",
-    name: "Server 5 (Global VIP Backup)",
+    name: "Server 5 (AnyEmbed VIP Backup)",
     badge: "VIP Stream",
     description: "Alternative direct unblocked stream",
   },
@@ -190,13 +159,6 @@ export function getEmbedFallbackUrl(
     lang && (lang.toLowerCase().includes("hin") || lang.toLowerCase() === "hi")
   );
 
-  // If Hindi requested or Server 2 selected, prioritize MultiEmbed which provides Hindi audio
-  if (serverId === "server2" || wantsHindi) {
-    return type === "movie"
-      ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
-      : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
-  }
-
   switch (serverId) {
     case "server1":
       // Vidsrc.su (Ultra-fast modern HTML5 player, no block, works for all titles)
@@ -205,16 +167,16 @@ export function getEmbedFallbackUrl(
         : `https://vidsrc.su/embed/tv/${cleanId}/${season}/${episode}`;
 
     case "server2":
-      // Multi-Audio / Hindi Dubbed (MultiEmbed)
+      // MultiEmbed (Rock-solid unblocked VIP player, fast loading, zero freeze)
       return type === "movie"
         ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
         : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
 
     case "server3":
-      // VidLink (1080p, Auto Next, Subtitles)
+      // AutoEmbed (Direct clean cloud stream)
       return type === "movie"
-        ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
-        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
+        ? `https://autoembed.co/movie/tmdb/${cleanId}`
+        : `https://autoembed.co/tv/tmdb/${cleanId}-${season}-${episode}`;
 
     case "server4":
       // 2Embed (Reliable high-speed stream)
@@ -223,10 +185,10 @@ export function getEmbedFallbackUrl(
         : `https://www.2embed.cc/embedtv/${cleanId}&s=${season}&e=${episode}`;
 
     case "server5":
-      // Vidsrc VIP / Multi-Cloud
+      // AnyEmbed / SmashyStream
       return type === "movie"
-        ? `https://vidsrc.xyz/embed/movie/${cleanId}`
-        : `https://vidsrc.xyz/embed/tv/${cleanId}/${season}/${episode}`;
+        ? `https://anyembed.xyz/embed/tmdb-movie-${cleanId}`
+        : `https://anyembed.xyz/embed/tmdb-tv-${cleanId}/${season}/${episode}`;
 
     default:
       return type === "movie"
@@ -281,7 +243,11 @@ async function extractNetMirrorEmbed(
 
       if (!title) return null;
 
-      const fetchNM = (u: string, init?: RequestInit) => {
+      const fetchNM = async (u: string, init?: RequestInit) => {
+        try {
+          const directRes = await fetch(u, init);
+          if (directRes.ok) return directRes;
+        } catch {}
         const proxied = proxifyUrl(u);
         return fetch(proxied, init);
       };
@@ -308,39 +274,74 @@ async function extractNetMirrorEmbed(
         return null;
       }
 
-      // Match best result
-      const cleanT = title.toLowerCase().trim();
-      const match =
-        searchData.searchResult.find((r: any) => r.t && r.t.toLowerCase().trim() === cleanT) ||
-        searchData.searchResult.find((r: any) => r.t && r.t.toLowerCase().includes(cleanT)) ||
-        searchData.searchResult[0];
+      // Match exact title (ignoring punctuation & case)
+      const normTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const match = searchData.searchResult.find((r: any) => {
+        if (!r.t) return false;
+        const normCandidate = r.t.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return normCandidate === normTitle;
+      });
 
-      if (!match || !match.id) return null;
+      if (!match || !match.id) {
+        console.warn(`[NetMirror] No exact title match found for "${title}"`);
+        return null;
+      }
 
       let targetNetId = match.id;
       if (type === "tv") {
         try {
-          const epRes = await fetchNM(`${netMirrorBase}/episodes.php?s=${match.id}&season=${season}`, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
-              Referer: `${netMirrorBase}/mobile/home?app=1`,
-            },
+          const authHeaders = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Cookie": `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+            "Referer": `${netMirrorBase}/home`,
+          };
+
+          // Step 1: Query post.php to resolve real season container ID
+          const postRes = await fetchNM(`${netMirrorBase}/post.php?id=${match.id}`, {
+            headers: authHeaders,
             signal: AbortSignal.timeout(4000),
           });
-          if (epRes.ok) {
-            const epData = await epRes.json().catch(() => null);
-            if (Array.isArray(epData.episodes) && epData.episodes[episode - 1]) {
-              targetNetId = epData.episodes[episode - 1].id || targetNetId;
+
+          if (postRes.ok) {
+            const postData = await postRes.json().catch(() => null);
+            if (postData && Array.isArray(postData.season)) {
+              const matchedSeason =
+                postData.season.find((s: any) => String(s.s) === String(season)) ||
+                postData.season[0];
+              const seasonId = matchedSeason?.id;
+
+              if (seasonId) {
+                // Step 2: Query episodes.php with Season ID to get episode IDs
+                const epRes = await fetchNM(`${netMirrorBase}/episodes.php?s=${seasonId}`, {
+                  headers: authHeaders,
+                  signal: AbortSignal.timeout(4000),
+                });
+
+                if (epRes.ok) {
+                  const epData = await epRes.json().catch(() => null);
+                  if (epData && Array.isArray(epData.episodes)) {
+                    const matchedEp =
+                      epData.episodes.find((e: any) => String(e.ep) === String(episode)) ||
+                      epData.episodes[episode - 1];
+                    if (matchedEp?.id) {
+                      targetNetId = String(matchedEp.id);
+                    }
+                  }
+                }
+              }
             }
           }
-        } catch {}
+        } catch (e) {
+          console.warn("[NetMirror] TV episode resolution error:", e);
+        }
       }
 
       // 3. Fetch Playlist from NetMirror
       const plRes = await fetchNM(`${netMirrorBase}/playlist.php?id=${targetNetId}`, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36",
-          Referer: `${netMirrorBase}/mobile/home?app=1`,
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Cookie: `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+          Referer: `${netMirrorBase}/home`,
         },
         signal: AbortSignal.timeout(4000),
       });
@@ -368,7 +369,8 @@ async function extractNetMirrorEmbed(
       const manifestRes = await fetchNM(masterPlaylistUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          Referer: `${netMirrorBase}/`,
+          Cookie: `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+          Referer: `${netMirrorBase}/home`,
         },
         signal: AbortSignal.timeout(4000),
       });
@@ -401,7 +403,8 @@ async function extractNetMirrorEmbed(
           const childRes = await fetchNM(fullChildUrl, {
             headers: {
               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              Referer: `${netMirrorBase}/`,
+              Cookie: `t_hash_p=${NETMIRROR_AUTH_TOKEN}`,
+              Referer: `${netMirrorBase}/home`,
             },
             signal: AbortSignal.timeout(4000),
           });
@@ -444,11 +447,21 @@ async function extractNetMirrorEmbed(
           const rawLabel = line.match(/NAME=["']([^"']+)["']/i)?.[1] || "Audio";
           const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
           const info = resolveLanguageInfo(rawLang, rawLabel);
+          if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
+
+          let cleanUri = uri;
+          if (cleanUri) {
+            cleanUri = cleanUri.replace(/nm-cdn([0-9]+)\.top/g, "freecdn$1.top");
+            if (cleanUri.startsWith("https:///")) {
+              cleanUri = cleanUri.replace("https:///", `${netMirrorBase}/`);
+            }
+          }
+
           audioTracks.push({
             label: info.name,
             lang: info.code,
             default: line.includes("DEFAULT=YES"),
-            url: uri,
+            url: cleanUri,
           });
         }
       }
@@ -463,13 +476,7 @@ async function extractNetMirrorEmbed(
           { quality: "720p", resolution: "720p", bandwidth: 2500000, url: masterPlaylistUrl },
         ],
         subtitles,
-        audioTracks:
-          audioTracks.length > 0
-            ? audioTracks
-            : [
-                { label: "Hindi", lang: "HIN", default: true },
-                { label: "English", lang: "ENG", default: false },
-              ],
+        audioTracks: audioTracks,
         provider: "NetMirror Ultra Cloud HD",
         referer: `${netMirrorBase}/`,
       };
@@ -508,6 +515,15 @@ async function extractVixSrcHLS(
 
   const task = (async (): Promise<StreamData | null> => {
     try {
+      const fetchVix = async (u: string, init?: RequestInit) => {
+        try {
+          const directRes = await fetch(u, init);
+          if (directRes.ok) return directRes;
+        } catch {}
+        const proxied = proxifyUrl(u);
+        return fetch(proxied, init);
+      };
+
       const langParam = lang
         ? `?lang=${encodeURIComponent(lang.toLowerCase().slice(0, 2))}`
         : "";
@@ -516,9 +532,9 @@ async function extractVixSrcHLS(
           ? `${VIXSRC_BASE}/api/movie/${tmdbId}${langParam}`
           : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}${langParam}`;
 
-      let apiRes = await fetch(apiUrl, {
+      let apiRes = await fetchVix(apiUrl, {
         headers: VIXSRC_HEADERS,
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       let apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
@@ -528,9 +544,9 @@ async function extractVixSrcHLS(
           type === "movie"
             ? `${VIXSRC_BASE}/api/movie/${tmdbId}`
             : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}`;
-        apiRes = await fetch(apiUrl, {
+        apiRes = await fetchVix(apiUrl, {
           headers: VIXSRC_HEADERS,
-          signal: AbortSignal.timeout(3000),
+          signal: AbortSignal.timeout(4000),
         });
         apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
       }
@@ -538,13 +554,13 @@ async function extractVixSrcHLS(
       if (!apiData || !apiData.src) return null;
 
       const embedUrl = `${VIXSRC_BASE}${apiData.src}`;
-      const embedRes = await fetch(embedUrl, {
+      const embedRes = await fetchVix(embedUrl, {
         headers: {
           ...VIXSRC_HEADERS,
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (!embedRes.ok) return null;
@@ -563,12 +579,12 @@ async function extractVixSrcHLS(
       const sep = playlistUrl.includes("?") ? "&" : "?";
       const masterPlaylistUrl = `${playlistUrl}${sep}token=${token}&expires=${expires}&h=1`;
 
-      const playlistRes = await fetch(masterPlaylistUrl, {
+      const playlistRes = await fetchVix(masterPlaylistUrl, {
         headers: {
           ...VIXSRC_HEADERS,
           Referer: apiUrl,
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (!playlistRes.ok) return null;
@@ -588,6 +604,7 @@ async function extractVixSrcHLS(
           const isDefault = line.includes("DEFAULT=YES");
           const uri = line.match(/URI=["']([^"']+)["']/i)?.[1];
           const info = resolveLanguageInfo(rawLang, rawLabel);
+          if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
           audioTracks.push({
             label: info.name,
             lang: info.code,
@@ -729,27 +746,30 @@ export async function probeAllServerLanguages(
     }
   }
 
-  // 2. Secondary: NetMirror Genuine Audio Tracks (Server 2 - Multi-Audio & Hindi Dubbed HD)
+  // 2. Secondary: NetMirror Genuine Audio Tracks (Fused into Server 1 Direct HLS)
   if (
     netMirrorRes.status === "fulfilled" &&
     netMirrorRes.value &&
-    netMirrorRes.value.masterPlaylistUrl &&
+    netMirrorRes.value.audioTracks &&
     netMirrorRes.value.audioTracks.length > 0
   ) {
     for (const track of netMirrorRes.value.audioTracks) {
       const info = resolveLanguageInfo(track.lang, track.label);
+      if (info.code === "UND" || info.name.toLowerCase() === "unknown") continue;
       addTrack({
         id: `nm_${info.code}_${aggregated.length}`,
         name: info.name,
         code: info.code,
-        serverId: "server2",
-        serverName: "Server 2 (Multi-Audio & Hindi Dubbed HD)",
+        serverId: "server1",
+        serverName: "Server 1 (CineStream Ultra Fast HD)",
         serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
         provider: "NetMirror Ultra Cloud HD",
         isDefault: false,
       });
     }
   }
+
+
 
   // Genuine Original Hindi audio handling (e.g. Bollywood/Indian content)
   const isOriginalHindi = origLang === "hi" || origLang === "hin";
@@ -856,53 +876,77 @@ export async function probeAvailableServers(
     return cached.data;
   }
 
-  const [vixRes, netMirrorRes] = await Promise.allSettled([
-    extractVixSrcHLS(tmdbId, type, season, episode),
-    netMirrorCooldownUntil > Date.now()
-      ? Promise.resolve(null)
-      : extractNetMirrorEmbed(tmdbId, type, season, episode),
+  const cleanId = tmdbId.split("-")[0];
+
+  const [vixRes, multiembedRes, autoembedRes, twoembedRes] = await Promise.allSettled([
+    extractVixSrcHLS(cleanId, type, season, episode),
+    fetch(
+      type === "movie"
+        ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
+        : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`,
+      { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
+    ),
+    fetch(
+      type === "movie"
+        ? `https://autoembed.co/movie/tmdb/${cleanId}`
+        : `https://autoembed.co/tv/tmdb/${cleanId}-${season}-${episode}`,
+      { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
+    ),
+    fetch(
+      type === "movie"
+        ? `https://www.2embed.cc/embed/${cleanId}`
+        : `https://www.2embed.cc/embedtv/${cleanId}&s=${season}&e=${episode}`,
+      { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
+    ),
   ]);
 
   const vixData = vixRes.status === "fulfilled" ? vixRes.value : null;
-  const netData = netMirrorRes.status === "fulfilled" ? netMirrorRes.value : null;
+  const isMultiembedOk = multiembedRes.status === "fulfilled";
+  const isAutoembedOk = autoembedRes.status === "fulfilled" && autoembedRes.value.ok;
+  const is2embedOk = twoembedRes.status === "fulfilled" && twoembedRes.value.ok;
 
   const validServers: ServerOption[] = [];
 
-  // Server 1 (CineStream Ultra Fast HD): verified if VixSrc has genuine master playlist
-  if (vixData && vixData.masterPlaylistUrl) {
+  // Server 1 (CineStream Fast HD): ALWAYS available as primary server (Direct HLS if available, or fast vidsrc.su embed)
+  validServers.push({
+    id: "server1",
+    name: "Server 1 (CineStream Fast HD)",
+    badge: vixData?.masterPlaylistUrl ? "1080p Direct" : "Fast HD",
+    description: "Ultra-fast unblocked cloud stream with instant loading",
+  });
+
+  // Server 2 (MultiEmbed VIP HD): verified unblocked stream with multi-subtitles
+  if (isMultiembedOk) {
     validServers.push({
-      id: "server1",
-      name: "Server 1 (CineStream Ultra Fast HD)",
-      badge: "1080p Ultra HD",
-      description: "Ultra-fast direct HLS stream with multi-audio dubs & subtitles",
+      id: "server2",
+      name: "Server 2 (MultiEmbed VIP HD)",
+      badge: "MultiEmbed HD",
+      description: "Ultra-reliable VIP streaming server with multi-subtitles",
     });
   }
 
-  // Server 2 (Global CDN HD / NetMirror): verified if NetMirror has valid video or hybrid fusion
-  const isNetMirrorBumper = Boolean(netData?.isAbuseVideo);
-  if (netData && netData.masterPlaylistUrl) {
-    if (!isNetMirrorBumper) {
-      validServers.push({
-        id: "server2",
-        name: "Server 2 (Global CDN HD)",
-        badge: "Multi-Audio HD",
-        description: "Direct high-speed stream with multi-language dubs",
-      });
-    } else if (vixData && vixData.masterPlaylistUrl) {
-      // NetMirror genuine audio fused with clean 1080p VixSrc video
-      validServers.push({
-        id: "server2",
-        name: "Server 2 (NetMirror Multi-Audio HD)",
-        badge: "1080p Multi-Audio HD",
-        description: "1080p Ultra HD stream with NetMirror genuine audio dubs",
-      });
-    }
+  // Server 3 (AutoEmbed Cloud HD): verified if AutoEmbed is reachable
+  if (isAutoembedOk) {
+    validServers.push({
+      id: "server3",
+      name: "Server 3 (AutoEmbed Cloud HD)",
+      badge: "Clean HD",
+      description: "Direct cloud backup stream without interruptions",
+    });
   }
 
-  const finalServers = AVAILABLE_SERVERS.map((srv) => {
-    const valid = validServers.find((v) => v.id === srv.id);
-    return valid || srv;
-  });
+  // Server 4 (2Embed Cloud Backup): verified if 2Embed is reachable
+  if (is2embedOk) {
+    validServers.push({
+      id: "server4",
+      name: "Server 4 (2Embed Cloud Backup)",
+      badge: "Fast HD",
+      description: "Global cloud stream backup",
+    });
+  }
+
+  // Only return verified, genuinely available servers. Fallback to Server 1 default only if empty.
+  const finalServers = validServers.length > 0 ? validServers : [AVAILABLE_SERVERS[0]];
 
   availableServersCache.set(cacheKey, {
     data: finalServers,
@@ -948,6 +992,7 @@ export async function extractDirectStream(
   if (netData && netData.audioTracks && netData.audioTracks.length > 0) {
     for (const nTrack of netData.audioTracks) {
       if (!nTrack.url) continue;
+      if (nTrack.lang.toUpperCase() === "UND" || nTrack.label.toLowerCase() === "unknown") continue;
       const isAlreadyInVix = vixData?.audioTracks.some(
         (vt) =>
           vt.label.toLowerCase() === nTrack.label.toLowerCase() ||
@@ -974,16 +1019,25 @@ export async function extractDirectStream(
   let chosenStream: StreamData | null = null;
   const isNetMirrorBumper = Boolean(netData?.isAbuseVideo);
 
-  // Scenario 1: User requested Server 2 (NetMirror)
+  // Handle explicit cloud embed server requests (Server 3, Server 4, Server 5)
+  if (serverId === "server3" || serverId === "server4" || serverId === "server5") {
+    return null;
+  }
+
+  // Scenario 1: User requested Server 2 (Multi-Audio & Hindi Dubbed HD)
   if (serverId === "server2" || serverId === "netmirror") {
     if (netData && !isNetMirrorBumper) {
       chosenStream = { ...netData };
-    } else if (vixData) {
-      // NetMirror video is bumper: fuse VixSrc 1080p video with NetMirror audio
+    } else if (extraAudioList.length > 0 && vixData) {
+      // NetMirror genuine audio fused with clean 1080p VixSrc video
       chosenStream = {
         ...vixData,
-        provider: "NetMirror Ultra Cloud HD",
+        provider: "CineStream Multi-Audio HD",
+        extraAudio: extraAudioList,
       };
+    } else {
+      // Fallback to Server 2 MultiEmbed
+      return null;
     }
   }
 
@@ -1027,6 +1081,7 @@ export async function extractDirectStream(
       );
 
       for (const ea of extraAudioList) {
+        if (ea.lang.toUpperCase() === "UND" || ea.label.toLowerCase() === "unknown") continue;
         if (!existingLangs.has(ea.label.toLowerCase())) {
           existingLangs.add(ea.label.toLowerCase());
           const isThisHindi =

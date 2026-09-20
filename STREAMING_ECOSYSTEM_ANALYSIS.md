@@ -150,7 +150,7 @@ Unlike NetMirror, MovieBox is a **Multi-Source Hybrid Content Aggregator**:
    * *Problem:* Fallback providers often wrap video players in iframes filled with pop-under ads, malware redirects, and betting ads.
    * *Resolution:*
      * **Direct HLS Manifest Extraction:** Extract the raw `.m3u8` playlist URL directly from the provider and stream it through our custom ad-free player (`AdFreePlayer.tsx`).
-     * **HTML5 Iframe Sandboxing:** When an iframe must be used, restrict it via `sandbox="allow-scripts allow-same-origin"` and block known ad network scripts (`adsterra`, `popads`, etc.).
+     * **HTML5 Iframe Sandboxing (Anti-Sandbox Bypass):** While sandboxing is ideal for restricting ads, modern fallback providers (e.g., VixSrc, VidSrc) run anti-sandbox checks that strictly refuse to play with `"Sandbox not allowed. Remove sandbox from the iframe to play"` or `"Please Disable Sandbox"`. The `sandbox` attribute must be omitted on embed iframes to ensure universal cross-server compatibility.
      * **Native Webview Interception:** In React Native, implement `shouldOverrideUrlLoading` in `react-native-webview` to block external redirects and unwanted tab creation.
 4. **Lack of Hindi / Multi-Audio on Non-Netflix Titles:**
    * *Problem:* While NetMirror carries official Hindi audio for Netflix content, standard web scrapers (VidSrc, VixSrc) usually only carry original English audio.
@@ -214,3 +214,56 @@ To build a robust, scalable system without wasted effort:
 3. **Phase 3 (React Native App Scaffolding):**
    * Build the standalone React Native app using `react-native-video` (ExoPlayer).
    * Direct all network requests through native `fetch` (`OkHttp`), eliminating serverless proxies and Vercel infrastructure costs completely.
+
+---
+
+## 7. Implemented Architecture & System Enhancements (Completed Milestones)
+
+The CineStream streaming platform has been fully upgraded with an enterprise-grade multi-provider streaming engine, clean human-readable routing, a Netflix-style QuickView ecosystem, and mobile-first cinema playback.
+
+### 7.1 Multi-Provider Routing & Active Server Filtering
+* **Automated Provider Fallback (`stream-extractor.ts` & `/api/stream`)**:
+  * **Priority 1 (NetMirror)**: Direct Netflix CDN extraction with official 1080p Full HD, multi-language dubs (Hindi, English, etc.), and WebVTT subtitles. Includes title fuzzy-matching and slug normalization.
+  * **Priority 2 (Multi-Source Fallback)**: Direct integration with secondary cyberlocker scrapers (VidSrc, VixSrc, Enhancer, SuperEmbed) for non-Netflix exclusives (Amazon Prime Video e.g., *Reacher*, Disney+, Apple TV+, theatrical releases).
+* **Live Dynamic Server Probe**:
+  * The backend probes all available streaming sources in parallel before serving the client.
+  * The UI (both Watch Page and QuickView Modal) dynamically displays **only verified, active servers** with status badges (`Fast HD`, `1080p Fast`, `Clean HD`), preventing dead-stream errors.
+
+### 7.2 Human-Readable Clean URLs & 100% SEO Preservation
+* **Smart Slug Resolution (`lib/tmdb.ts` & `app/watch/[id]/page.tsx`)**:
+  * Video URLs transformed from numeric IDs (`/watch/1423191?type=movie`) into clean, SEO-friendly keyword slugs (`/watch/resident-evil?type=movie`, `/watch/reacher?type=tv`, `/watch/harry-potter-and-the-goblet-of-fire?type=movie`).
+  * Full backwards compatibility: Numeric TMDB IDs continue to resolve seamlessly.
+  * Complete Schema.org Structured Data maintained without degradation:
+    * `Movie` & `TVEpisode` schemas with actors, directors, release dates.
+    * `VideoObject` schema with thumbnail URLs and embed links for Google Video Search indexing.
+    * `BreadcrumbList` & `FAQPage` rich snippet schemas.
+
+### 7.3 Netflix-Style QuickView Modal & Tabbed Navigation
+* **Dual Action Control Flow**:
+  * Clicking anywhere on a movie/show card opens the **QuickView Modal** with complete metadata, verified server availability, and trailers.
+  * Clicking the dedicated **Play / Resume** button launches playback directly without extra clicks.
+* **Responsive Underline Tab System**:
+  * **Tab 1: Episodes (TV Shows)**: Season dropdown selector with individual episode cards, runtimes, air dates, and live red progress tracks.
+  * **Tab 2: More Like This**: Curated TMDB recommendation grid matching title genres and themes.
+  * **Tab 3: Details & Cast**: Cast member profile photos, character roles, directors/creators, genres, and audio language tracks.
+  * **Full Page Button**: Instant, smooth transition to the dedicated canonical watch page.
+
+### 7.4 Adaptive Bitrate Streaming (ABR) & Dynamic Quality Switching (`AdFreePlayer.tsx`)
+* **Internet Speed-Based Quality Adaptation**:
+  * Integrated HLS.js Adaptive Bitrate Streaming (ABR) engine that continuously measures real-time chunk download throughput.
+  * **Fast Internet (WiFi / 5G)**: Automatically delivers 1080p Full HD.
+  * **Fluctuating / Slow Internet**: Automatically steps down to 720p or 480p without playback interruption or buffering freeze.
+  * **Live Display Indicator**: The settings menu dynamically displays the active resolution selected by ABR (e.g., `Auto 1080p`, `Auto 720p`).
+* **Manual Quality Lock**:
+  * Selecting any specific resolution (1080p, 720p, 480p) overrides ABR and permanently locks playback to the chosen quality until reset to "Auto".
+
+### 7.5 Mobile-First Player Experience & Fullscreen Architecture
+* **Native Mobile Bottom Sheet**:
+  * On mobile screens (`< 640px`), the modal transforms into a native mobile bottom sheet (`h-[92dvh]`, `rounded-t-[28px]`, top pull handle, single-row action buttons).
+* **Full Mobile Fullscreen & Orientation Lock**:
+  * **Dual Fullscreen Access**: Prominent Fullscreen button (`⤢`) on the bottom control bar + secondary quick Fullscreen button in the top player header.
+  * **Auto Landscape Rotation**: Tapping Fullscreen on Android/Chrome automatically locks screen orientation to landscape (`screen.orientation.lock('landscape')`).
+  * **iOS Safari Native Fullscreen**: Falls back to Apple AVPlayer fullscreen (`webkitEnterFullscreen`).
+  * **Mobile Zoom / Fit-to-Screen**: Dedicated aspect ratio toggle allowing users to switch between letterboxed widescreen (`contain`) and full-screen edge-to-edge zoom (`cover`).
+  * **Safe-Area Insets**: Bottom scrubber and action controls respect iPhone home indicators and curved display corners (`pb-[max(env(safe-area-inset-bottom,0px),12px)]`).
+  * **UX Fixes**: Removed mobile tap highlight boxes, hidden desktop volume sliders on mobile, disabled Next.js dev indicator badge overlap, and eliminated React hydration mismatch warnings.

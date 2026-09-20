@@ -7,6 +7,8 @@ import ScrollRow from "@/components/ScrollRow";
 import { 
   getTrendingMovies, 
   getPopularTVSeries, 
+  getPopularNetflixTitles,
+  enrichWithPlatform,
   getByGenre, 
   getHindiMovies, 
   getPunjabiMovies, 
@@ -27,6 +29,7 @@ export default async function Home() {
   const [
     trendingMovies, 
     popularTV, 
+    netflixTitles,
     hindiMovies, 
     punjabiMovies, 
     tamilMovies, 
@@ -34,14 +37,15 @@ export default async function Home() {
     actionMovies, 
     horrorMovies
   ] = await Promise.all([
-    getTrendingMovies(),
-    getPopularTVSeries(),
-    getHindiMovies(),
-    getPunjabiMovies(),
-    getTamilMovies(),
-    getTeluguMovies(),
-    getByGenre(GENRE_IDS.Action),
-    getByGenre(GENRE_IDS.Horror)
+    getTrendingMovies().then(enrichWithPlatform),
+    getPopularTVSeries().then(enrichWithPlatform),
+    getPopularNetflixTitles(),
+    getHindiMovies().then(enrichWithPlatform),
+    getPunjabiMovies().then(enrichWithPlatform),
+    getTamilMovies().then(enrichWithPlatform),
+    getTeluguMovies().then(enrichWithPlatform),
+    getByGenre(GENRE_IDS.Action).then(enrichWithPlatform),
+    getByGenre(GENRE_IDS.Horror).then(enrichWithPlatform)
   ]);
 
   return (
@@ -55,6 +59,11 @@ export default async function Home() {
       {/* Global Trending & Popular Series */}
       <MovieRow title="Trending Movies" data={trendingMovies} link="/explore/trending" />
       <MovieRow title="Latest Series" data={popularTV} link="/explore/tv" />
+
+      {/* Popular on Netflix */}
+      {netflixTitles.length > 0 && (
+        <MovieRow title="Popular on Netflix" data={netflixTitles} link="/explore/tv" />
+      )}
       
       {/* Regional Cinema Spotlight Cards */}
       <section className="px-8 md:px-16 pt-24">

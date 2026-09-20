@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade, Pagination, Navigation } from "swiper/modules";
 import { getTrendingMovies, getImageUrl, getMovieDetails } from "@/lib/tmdb";
 import { useWatchlist } from "@/lib/watchlist";
+import { useQuickView } from "@/context/QuickViewContext";
 
 // Import Swiper styles
 import "swiper/css";
@@ -20,6 +21,7 @@ export default function Hero() {
   const swiperRef = useRef<any>(null);
   const hoverTimeoutRef = useRef<any>(null);
   const { isSaved, toggle } = useWatchlist();
+  const { openQuickView } = useQuickView();
 
   useEffect(() => {
     const fetchHeroData = async () => {
@@ -153,28 +155,53 @@ export default function Hero() {
                 <div className="absolute inset-0 z-1 bg-gradient-to-t from-[#0a0a0b] via-[#0a0a0b]/30 to-transparent pointer-events-none" />
               
               {/* Content Overlay */}
-              <div className="relative z-10 flex h-full flex-col justify-center px-8 md:px-20 max-w-4xl py-20 translate-y-10 animate-fade-in">
+              <div className="relative z-10 flex h-full flex-col justify-center px-4 sm:px-8 md:px-20 max-w-4xl py-12 sm:py-20 translate-y-4 sm:translate-y-10 animate-fade-in">
                 <div className="flex items-center gap-3 mb-6">
                     <span className="bg-accent px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-widest shadow-lg shadow-accent/20 italic">Featured</span>
                     <span className="text-white/60 font-bold text-sm">{movie.release_date?.split('-')[0]}</span>
                     <span className="flex items-center gap-1.5 text-yellow-500 font-bold text-sm"><i className="ph-fill ph-star"></i> {movie.vote_average?.toFixed(1)}</span>
                 </div>
                 
-                <h1 className="text-4xl md:text-7xl font-black text-white italic mb-6 leading-[1.1] drop-shadow-2xl uppercase tracking-tighter">
+                <h1 className="text-2xl sm:text-4xl md:text-7xl font-black text-white italic mb-3 sm:mb-6 leading-[1.1] drop-shadow-2xl uppercase tracking-tighter">
                   {movie.title}
                 </h1>
                 
-                <p className="mb-10 max-w-2xl text-base md:text-xl text-[#a0a0a0] leading-relaxed line-clamp-3 md:line-clamp-none font-medium">
+                <p className="mb-5 sm:mb-10 max-w-2xl text-xs sm:text-base md:text-xl text-[#a0a0a0] leading-relaxed line-clamp-2 sm:line-clamp-3 md:line-clamp-none font-medium">
                   {movie.overview}
                 </p>
                 
-                <div className="flex flex-wrap items-center gap-4">
-                  <Link
-                    href={`/watch/${movie.id}?type=movie`}
-                    className="flex items-center gap-3 rounded-xl bg-white px-10 py-4 text-sm md:text-base font-black text-black transition-all hover:scale-105 active:scale-95 shadow-2xl"
-                  >
-                    <i className="ph-fill ph-play text-xl md:text-2xl"></i> WATCH NOW
-                  </Link>
+                <div className="flex items-center gap-2.5 sm:gap-4 flex-wrap">
+                  {(() => {
+                    const cleanSlug = (movie.title || movie.name || "")
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]+/g, "-")
+                      .replace(/(^-|-$)/g, "");
+
+                    return (
+                      <Link
+                        href={`/watch/${cleanSlug}?type=movie`}
+                        onClick={(e) => {
+                          if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                            e.preventDefault();
+                            openQuickView({
+                              id: movie.id,
+                              title: movie.title || movie.name,
+                              name: movie.title || movie.name,
+                              poster_path: movie.poster_path,
+                              backdrop_path: movie.backdrop_path,
+                              media_type: "movie",
+                              overview: movie.overview,
+                              vote_average: movie.vote_average,
+                              release_date: movie.release_date,
+                            });
+                          }
+                        }}
+                        className="flex items-center gap-2 sm:gap-3 rounded-xl bg-white px-5 py-2.5 sm:px-8 sm:py-3.5 md:px-10 md:py-4 text-xs sm:text-sm md:text-base font-black text-black transition-all hover:scale-105 active:scale-95 shadow-2xl cursor-pointer"
+                      >
+                        <i className="ph-fill ph-play text-xl md:text-2xl"></i> WATCH NOW
+                      </Link>
+                    );
+                  })()}
                   <button 
                     onClick={() => toggle({
                       id: movie.id,

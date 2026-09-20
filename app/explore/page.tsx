@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import MovieCard from '@/components/MovieCard';
-import { searchMovies, GENRE_IDS, getByGenre } from '@/lib/tmdb';
+import { searchMovies, GENRE_IDS, getByGenre, enrichWithPlatform } from '@/lib/tmdb';
 import SkeletonCard from '@/components/SkeletonCard';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -11,7 +11,7 @@ function ExploreContent() {
   const q = searchParams.get('q') || '';
 
   const [searchQuery, setSearchQuery] = useState(q);
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<{ type: 'genre' | 'lang' | 'trending'; value: string; label: string }>({ type: 'trending', value: 'trending', label: 'Trending' });
 
@@ -29,6 +29,10 @@ function ExploreContent() {
     { type: 'genre' as const, value: 'Thriller', label: 'Thriller' }
   ];
 
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   // Sync state if URL search query changes
   useEffect(() => {
     setSearchQuery(q);
@@ -37,30 +41,81 @@ function ExploreContent() {
   useEffect(() => {
     const fetchResults = async () => {
       setLoading(true);
+      setPage(1);
+      let data: any[] = [];
       if (searchQuery.trim() === '') {
         if (selectedCategory.type === 'lang') {
-          const data = await import('@/lib/tmdb').then(m => m.getByLanguage(selectedCategory.value));
-          setResults(data || []);
+          const mod = await import('@/lib/tmdb');
+          data = (await mod.getByLanguage(selectedCategory.value, 1)) || [];
         } else if (selectedCategory.type === 'genre') {
           const genreId = GENRE_IDS[selectedCategory.value as keyof typeof GENRE_IDS];
-          const data = genreId ? await getByGenre(genreId) : [];
-          setResults(data || []);
+          const mod = await import('@/lib/tmdb');
+          data = genreId ? (await mod.getByGenre(genreId, 1)) || [] : [];
         } else {
-          const data = await searchMovies("popular");
-          setResults(data || []);
+          const mod = await import('@/lib/tmdb');
+          data = (await mod.getTrendingMovies(1)) || [];
         }
       } else {
-        const data = await searchMovies(searchQuery);
-        // Filter out people and unknown media types
-        const filtered = data?.filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv' || !item.media_type) || [];
-        setResults(filtered);
+        const mod = await import('@/lib/tmdb');
+        const res = await mod.searchMovies(searchQuery, 1);
+        data = res?.filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv' || !item.media_type) || [];
       }
+      if (data && data.length > 0) {
+        data = await enrichWithPlatform(data);
+      }
+      setResults(data as any);
+      setHasMore(data.length >= 10);
       setLoading(false);
     };
 
     const timeoutId = setTimeout(fetchResults, 400); // Debounce search
     return () => clearTimeout(timeoutId);
   }, [searchQuery, selectedCategory]);
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+
+    try {
+      let data: any[] = [];
+      if (searchQuery.trim() === '') {
+        if (selectedCategory.type === 'lang') {
+          const mod = await import('@/lib/tmdb');
+          data = (await mod.getByLanguage(selectedCategory.value, nextPage)) || [];
+        } else if (selectedCategory.type === 'genre') {
+          const genreId = GENRE_IDS[selectedCategory.value as keyof typeof GENRE_IDS];
+          const mod = await import('@/lib/tmdb');
+          data = genreId ? (await mod.getByGenre(genreId, nextPage)) || [] : [];
+        } else {
+          const mod = await import('@/lib/tmdb');
+          data = (await mod.getTrendingMovies(nextPage)) || [];
+        }
+      } else {
+        const mod = await import('@/lib/tmdb');
+        const res = await mod.searchMovies(searchQuery, nextPage);
+        data = res?.filter((item: any) => item.media_type === 'movie' || item.media_type === 'tv' || !item.media_type) || [];
+      }
+
+      if (data && data.length > 0) {
+        data = await enrichWithPlatform(data);
+        setResults((prev: any) => {
+          const existing = new Set(prev.map((m: any) => String(m.id)));
+          const uniqueNew = data.filter((m: any) => !existing.has(String(m.id)));
+          return [...prev, ...uniqueNew];
+        });
+        setPage(nextPage);
+        setHasMore(data.length >= 10);
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error("Error loading more titles:", err);
+      setHasMore(false);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
@@ -143,13 +198,59 @@ function ExploreContent() {
               {[1,2,3,4,5,6,7].map(i => <SkeletonCard key={i} />)}
           </div>
         ) : results.length > 0 ? (
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
-            {results.map((movie: any) => (
-              <div key={movie.id} className="animate-fade-in">
-                <MovieCard {...movie} />
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
+              {results.map((movie: any) => (
+                <div key={movie.id} className="animate-fade-in">
+                  <MovieCard {...movie} />
+                </div>
+              ))}
+            </div>
+
+            {/* View More / Load More Section */}
+            <div className="flex flex-col items-center justify-center pt-8 pb-12">
+              {hasMore ? (
+                <div className="flex flex-col items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="group relative px-8 py-3.5 sm:px-10 sm:py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 hover:border-accent/60 text-white font-black uppercase text-xs sm:text-sm tracking-wider flex items-center gap-3 shadow-2xl hover:shadow-accent/20 transition-all cursor-pointer transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none backdrop-blur-xl"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                        <span className="text-white/80">Loading More Titles...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>View More</span>
+                        <svg
+                          className="w-4 h-4 text-white/70 group-hover:text-accent group-hover:translate-y-0.5 transition-transform"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+
+                  <span className="text-[11px] font-bold text-white/30 uppercase tracking-widest">
+                    Showing {results.length} titles
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-white/30 text-xs font-bold uppercase tracking-wider py-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/30"></span>
+                  <span>You have reached the end • {results.length} titles loaded</span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/30"></span>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-40 text-center">
              <div className="h-24 w-24 rounded-full bg-white/5 flex items-center justify-center mb-8 border border-white/10">

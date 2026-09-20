@@ -1,6 +1,6 @@
 import React from 'react';
-import MovieCard from '@/components/MovieCard';
-import { getPopularTVSeries } from '@/lib/tmdb';
+import ExploreGrid from '@/components/ExploreGrid';
+import { getPopularTVSeries, enrichWithPlatform } from '@/lib/tmdb';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export default async function TVShowsPage() {
-  const shows = await getPopularTVSeries();
+  const shows = await getPopularTVSeries().then(enrichWithPlatform);
 
   // Schema.org ItemList for Google Carousel
   const itemListSchema = {
@@ -73,20 +73,7 @@ export default async function TVShowsPage() {
                     <div className="flex-1 h-[1px] bg-white/5 ml-8"></div>
                 </div>
                 
-                {shows && shows.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7">
-                        {shows.map((show: any) => (
-                            <div key={show.id} className="transition-transform hover:z-10">
-                                <MovieCard {...show} />
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-40 bg-white/5 rounded-[40px] border border-white/5">
-                        <i className="ph-fill ph-monitor-play text-8xl text-white/5 mb-6"></i>
-                        <p className="text-xl font-bold text-[#a0a0a0]">No series available at the moment</p>
-                    </div>
-                )}
+                <ExploreGrid initialMovies={shows} type="tv" />
             </section>
         </div>
     </div>
