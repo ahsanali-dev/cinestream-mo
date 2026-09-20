@@ -60,6 +60,8 @@ export const NETMIRROR_AUTH_TOKEN =
   "14840b2ca5ff6340cc40594ea2b47171%3A%3Adb15a6012f2c06027ce4d0b198f5acca%3A%3A1789689641%3A%3Akp%3A%3Ap";
 
 export const CF_WORKER_PROXY =
+  process.env.STREAM_PROXY_URL ||
+  process.env.DENO_PROXY_URL ||
   process.env.CLOUDFLARE_WORKER_PROXY_URL ||
   "https://cinestream-proxy.ahsan-dev98.workers.dev";
 
@@ -116,9 +118,9 @@ export const AVAILABLE_SERVERS: ServerOption[] = [
   },
   {
     id: "server2",
-    name: "Server 2 (VidLink 1080p Stream)",
-    badge: "1080p Fast",
-    description: "Ultra-clean 1080p stream with multi-subtitles and fast buffering",
+    name: "Server 2 (MultiEmbed VIP HD)",
+    badge: "MultiEmbed HD",
+    description: "Ultra-reliable VIP streaming server with multi-subtitles",
   },
   {
     id: "server3",
@@ -165,10 +167,10 @@ export function getEmbedFallbackUrl(
         : `https://vidsrc.su/embed/tv/${cleanId}/${season}/${episode}`;
 
     case "server2":
-      // VidLink (Clean 1080p, Auto Next, Subtitles, Zero popups, No McAfee block)
+      // MultiEmbed (Rock-solid unblocked VIP player, fast loading, zero freeze)
       return type === "movie"
-        ? `https://vidlink.pro/movie/${cleanId}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`
-        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}?primaryColor=e74c3c&secondaryColor=111115&iconColor=ffffff&title=true&poster=true`;
+        ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
+        : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`;
 
     case "server3":
       // AutoEmbed (Direct clean cloud stream)
@@ -513,6 +515,15 @@ async function extractVixSrcHLS(
 
   const task = (async (): Promise<StreamData | null> => {
     try {
+      const fetchVix = async (u: string, init?: RequestInit) => {
+        try {
+          const directRes = await fetch(u, init);
+          if (directRes.ok) return directRes;
+        } catch {}
+        const proxied = proxifyUrl(u);
+        return fetch(proxied, init);
+      };
+
       const langParam = lang
         ? `?lang=${encodeURIComponent(lang.toLowerCase().slice(0, 2))}`
         : "";
@@ -521,9 +532,9 @@ async function extractVixSrcHLS(
           ? `${VIXSRC_BASE}/api/movie/${tmdbId}${langParam}`
           : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}${langParam}`;
 
-      let apiRes = await fetch(apiUrl, {
+      let apiRes = await fetchVix(apiUrl, {
         headers: VIXSRC_HEADERS,
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       let apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
@@ -533,9 +544,9 @@ async function extractVixSrcHLS(
           type === "movie"
             ? `${VIXSRC_BASE}/api/movie/${tmdbId}`
             : `${VIXSRC_BASE}/api/tv/${tmdbId}/${season}/${episode}`;
-        apiRes = await fetch(apiUrl, {
+        apiRes = await fetchVix(apiUrl, {
           headers: VIXSRC_HEADERS,
-          signal: AbortSignal.timeout(3000),
+          signal: AbortSignal.timeout(4000),
         });
         apiData = apiRes.ok ? await apiRes.json().catch(() => null) : null;
       }
@@ -543,13 +554,13 @@ async function extractVixSrcHLS(
       if (!apiData || !apiData.src) return null;
 
       const embedUrl = `${VIXSRC_BASE}${apiData.src}`;
-      const embedRes = await fetch(embedUrl, {
+      const embedRes = await fetchVix(embedUrl, {
         headers: {
           ...VIXSRC_HEADERS,
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (!embedRes.ok) return null;
@@ -568,12 +579,12 @@ async function extractVixSrcHLS(
       const sep = playlistUrl.includes("?") ? "&" : "?";
       const masterPlaylistUrl = `${playlistUrl}${sep}token=${token}&expires=${expires}&h=1`;
 
-      const playlistRes = await fetch(masterPlaylistUrl, {
+      const playlistRes = await fetchVix(masterPlaylistUrl, {
         headers: {
           ...VIXSRC_HEADERS,
           Referer: apiUrl,
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(4000),
       });
 
       if (!playlistRes.ok) return null;
@@ -867,12 +878,12 @@ export async function probeAvailableServers(
 
   const cleanId = tmdbId.split("-")[0];
 
-  const [vixRes, vidlinkRes, autoembedRes, twoembedRes] = await Promise.allSettled([
+  const [vixRes, multiembedRes, autoembedRes, twoembedRes] = await Promise.allSettled([
     extractVixSrcHLS(cleanId, type, season, episode),
     fetch(
       type === "movie"
-        ? `https://vidlink.pro/movie/${cleanId}`
-        : `https://vidlink.pro/tv/${cleanId}/${season}/${episode}`,
+        ? `https://multiembed.mov/?video_id=${cleanId}&tmdb=1`
+        : `https://multiembed.mov/?video_id=${cleanId}&tmdb=1&s=${season}&e=${episode}`,
       { method: "HEAD", headers: { "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(2500) }
     ),
     fetch(
@@ -890,29 +901,27 @@ export async function probeAvailableServers(
   ]);
 
   const vixData = vixRes.status === "fulfilled" ? vixRes.value : null;
-  const isVidlinkOk = vidlinkRes.status === "fulfilled" && vidlinkRes.value.ok;
+  const isMultiembedOk = multiembedRes.status === "fulfilled";
   const isAutoembedOk = autoembedRes.status === "fulfilled" && autoembedRes.value.ok;
   const is2embedOk = twoembedRes.status === "fulfilled" && twoembedRes.value.ok;
 
   const validServers: ServerOption[] = [];
 
-  // Server 1 (CineStream Fast HD): verified if VixSrc has genuine master playlist
-  if (vixData && vixData.masterPlaylistUrl) {
-    validServers.push({
-      id: "server1",
-      name: "Server 1 (CineStream Fast HD)",
-      badge: "Fast HD",
-      description: "Ultra-fast unblocked cloud stream with instant loading",
-    });
-  }
+  // Server 1 (CineStream Fast HD): ALWAYS available as primary server (Direct HLS if available, or fast vidsrc.su embed)
+  validServers.push({
+    id: "server1",
+    name: "Server 1 (CineStream Fast HD)",
+    badge: vixData?.masterPlaylistUrl ? "1080p Direct" : "Fast HD",
+    description: "Ultra-fast unblocked cloud stream with instant loading",
+  });
 
-  // Server 2 (VidLink 1080p Stream): verified if VidLink is available and non-error
-  if (isVidlinkOk) {
+  // Server 2 (MultiEmbed VIP HD): verified unblocked stream with multi-subtitles
+  if (isMultiembedOk) {
     validServers.push({
       id: "server2",
-      name: "Server 2 (VidLink 1080p Stream)",
-      badge: "1080p Fast",
-      description: "Ultra-clean 1080p stream with multi-subtitles and fast buffering",
+      name: "Server 2 (MultiEmbed VIP HD)",
+      badge: "MultiEmbed HD",
+      description: "Ultra-reliable VIP streaming server with multi-subtitles",
     });
   }
 
