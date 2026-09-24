@@ -75,11 +75,11 @@ export async function GET(req: NextRequest) {
                   width: "42px",
                   height: "42px",
                   borderRadius: "12px",
-                  backgroundColor: "#e50914",
+                  backgroundColor: "#FF6A00",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 0 25px rgba(229,9,20,0.6)",
+                  boxShadow: "0 0 25px rgba(255,106,0,0.6)",
                 }}
               >
                 <div
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
                   fontStyle: "italic",
                 }}
               >
-                Cine<span style={{ color: "#e50914" }}>Stream</span>
+                Movies<span style={{ color: "#FF6A00" }}>Zone</span>
               </span>
             </div>
 
@@ -115,9 +115,9 @@ export async function GET(req: NextRequest) {
             >
               <div
                 style={{
-                  backgroundColor: "rgba(229, 9, 20, 0.2)",
-                  border: "1px solid rgba(229, 9, 20, 0.5)",
-                  color: "#ff6b72",
+                  backgroundColor: "rgba(255, 106, 0, 0.2)",
+                  border: "1px solid rgba(255, 106, 0, 0.5)",
+                  color: "#FF6A00",
                   padding: "6px 14px",
                   borderRadius: "8px",
                   fontSize: "14px",
@@ -159,7 +159,7 @@ export async function GET(req: NextRequest) {
             <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
               <span
                 style={{
-                  backgroundColor: "#e50914",
+                  backgroundColor: "#FF6A00",
                   color: "white",
                   padding: "4px 10px",
                   borderRadius: "6px",
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
               </span>
               <span
                 style={{
-                  color: "#eab308",
+                  color: "#FFAA00",
                   fontSize: "18px",
                   fontWeight: 800,
                   display: "flex",
@@ -214,7 +214,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: 500,
               }}
             >
-              Watch in Full HD with Hindi Dubbed audio and multi-language subtitles on CineStream. Zero ads, ultra-fast streaming.
+              Watch in Full HD with Hindi Dubbed audio and multi-language subtitles on MoviesZone. Zero ads, ultra-fast streaming.
             </p>
           </div>
 
@@ -236,7 +236,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: 600,
               }}
             >
-              cinestream-mo.vercel.app
+              movieszonestream.vercel.app
             </span>
 
             <div

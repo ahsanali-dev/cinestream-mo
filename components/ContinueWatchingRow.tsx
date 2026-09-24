@@ -49,7 +49,7 @@ export default function ContinueWatchingRow() {
                 clear();
               }
             }}
-            className="text-[11px] font-bold text-white/40 hover:text-red-400 transition-colors uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
+            className="text-[11px] font-bold text-white/40 hover:text-accent transition-colors uppercase tracking-wider flex items-center gap-1.5 cursor-pointer"
           >
             <i className="ph-bold ph-trash"></i>
             <span>Clear</span>
@@ -84,7 +84,7 @@ export default function ContinueWatchingRow() {
           return (
             <div
               key={`cw-${item.id}-${item.type}-${item.season || 0}-${item.episode || 0}`}
-              className="w-64 sm:w-72 md:w-80 shrink-0 group relative rounded-2xl overflow-hidden bg-[#121216] border border-white/10 hover:border-red-600/50 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-[1.02]"
+              className="w-64 sm:w-72 md:w-80 shrink-0 group relative rounded-2xl overflow-hidden bg-[#121216] border border-white/10 hover:border-accent/50 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-[1.02]"
             >
               {/* Card Body - Clicking anywhere on card opens Quick View Detail Modal with clean URL */}
               <Link 
@@ -125,7 +125,7 @@ export default function ContinueWatchingRow() {
                       e.stopPropagation();
                       router.push(directPlayLink);
                     }}
-                    className="pointer-events-auto h-12 w-12 sm:h-13 sm:w-13 rounded-full bg-red-600/90 hover:bg-red-600 text-white flex items-center justify-center text-xl shadow-[0_0_25px_rgba(229,9,20,0.85)] border border-white/40 transform scale-90 group-hover:scale-100 hover:!scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+                    className="pointer-events-auto h-12 w-12 sm:h-13 sm:w-13 rounded-full bg-accent/90 hover:bg-accent text-white flex items-center justify-center text-xl shadow-[0_0_25px_rgba(255,106,0,0.85)] border border-white/40 transform scale-90 group-hover:scale-100 hover:!scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
                     title="Play Immediately"
                     aria-label={`Play ${item.title} now`}
                   >
@@ -141,7 +141,7 @@ export default function ContinueWatchingRow() {
                     S{item.season} • E{item.episode}
                   </div>
                 ) : (
-                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-red-600/90 backdrop-blur-md rounded-lg text-[9px] font-black tracking-widest text-white uppercase shadow-md z-10">
+                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-accent/90 backdrop-blur-md rounded-lg text-[9px] font-black tracking-widest text-white uppercase shadow-md z-10">
                     Resume
                   </div>
                 )}
@@ -161,7 +161,7 @@ export default function ContinueWatchingRow() {
                   <div className="relative w-full h-1 bg-white/20 rounded-full overflow-hidden">
                     <div
                       style={{ width: `${Math.min(100, Math.max(3, item.progressPercentage))}%` }}
-                      className="h-full bg-red-600 rounded-full shadow-[0_0_8px_rgba(229,9,20,0.9)]"
+                      className="h-full bg-accent rounded-full shadow-[0_0_8px_rgba(255,106,0,0.9)]"
                     />
                   </div>
                 </div>
@@ -175,7 +175,7 @@ export default function ContinueWatchingRow() {
                   e.stopPropagation();
                   remove(item.id, item.type, item.season, item.episode);
                 }}
-                className="absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-black/70 hover:bg-red-600 text-white/70 hover:text-white flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 z-20 border border-white/10 hover:border-red-500 shadow-md"
+                className="absolute top-2.5 right-2.5 h-7 w-7 rounded-full bg-black/70 hover:bg-accent text-white/70 hover:text-white flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 z-20 border border-white/10 hover:border-accent shadow-md"
                 title="Remove from Continue Watching"
                 aria-label="Remove item"
               >

@@ -396,7 +396,7 @@ export default function QuickViewModal() {
           <button
             type="button"
             onClick={closeQuickView}
-            className="pointer-events-auto h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-black/80 hover:bg-red-600 text-white flex items-center justify-center cursor-pointer border border-white/20 transition-all shadow-xl group hover:scale-105 active:scale-95 backdrop-blur-md"
+            className="pointer-events-auto h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-black/80 hover:bg-accent text-white flex items-center justify-center cursor-pointer border border-white/20 transition-all shadow-xl group hover:scale-105 active:scale-95 backdrop-blur-md"
             title="Close (Esc)"
             aria-label="Close modal"
           >
@@ -420,7 +420,7 @@ export default function QuickViewModal() {
               <button
                 type="button"
                 onClick={() => setIsTrailerOpen(false)}
-                className="absolute top-3 right-14 sm:top-4 sm:right-16 px-3 py-1.5 rounded-full bg-black/80 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer z-40 backdrop-blur-md shadow-lg"
+                className="absolute top-3 right-14 sm:top-4 sm:right-16 px-3 py-1.5 rounded-full bg-black/80 hover:bg-accent text-white text-xs font-bold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer z-40 backdrop-blur-md shadow-lg"
               >
                 <span>Close Trailer</span>
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -471,7 +471,7 @@ export default function QuickViewModal() {
                   <button
                     type="button"
                     onClick={() => handlePlayDirect(selectedSeason, 1)}
-                    className="px-4 py-2 sm:px-7 sm:py-3 rounded-xl sm:rounded-2xl bg-red-600 hover:bg-red-500 text-white font-black italic uppercase text-xs sm:text-sm tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-[0_0_25px_rgba(229,9,20,0.8)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer border border-red-400/40 shrink-0"
+                    className="px-4 py-2 sm:px-7 sm:py-3 rounded-xl sm:rounded-2xl bg-accent hover:bg-[#ff7b1a] text-white font-black italic uppercase text-xs sm:text-sm tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-[0_0_25px_rgba(255,106,0,0.8)] transition-all transform hover:scale-105 active:scale-95 cursor-pointer border border-accent/40 shrink-0"
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current ml-0.5" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />
@@ -487,7 +487,7 @@ export default function QuickViewModal() {
                       className="px-3.5 py-2 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all hover:border-white/40 cursor-pointer active:scale-95 shrink-0"
                       title="Watch Official Trailer"
                     >
-                      <svg className="w-3.5 h-3.5 text-red-500 fill-current" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 text-accent fill-current" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />
                       </svg>
                       <span>Trailer</span>
@@ -499,7 +499,7 @@ export default function QuickViewModal() {
                     type="button"
                     onClick={handleWatchlistClick}
                     className={`h-8.5 w-8.5 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl border flex items-center justify-center transition-all cursor-pointer shrink-0 ${inWatchlist
-                        ? "bg-red-600/20 border-red-500 text-red-500 shadow-[0_0_15px_rgba(229,9,20,0.3)]"
+                        ? "bg-accent/20 border-accent text-accent shadow-[0_0_15px_rgba(255,106,0,0.3)]"
                         : "bg-white/10 hover:bg-white/20 border-white/20 text-white"
                       }`}
                     title={inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
@@ -587,7 +587,7 @@ export default function QuickViewModal() {
             <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-white/50 flex items-center gap-1.5 sm:gap-2">
-                  <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
+                  <span className="h-2 w-2 rounded-full bg-accent animate-pulse"></span>
                   Select Audio Language ({cleanLanguages.length} Available)
                 </span>
                 {selectedLanguage && (
@@ -623,7 +623,7 @@ export default function QuickViewModal() {
                         handleSelectLanguage(track.name);
                       }}
                       className={`relative shrink-0 pb-2 text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${isSelected
-                          ? "text-white font-black text-xs sm:text-sm after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                          ? "text-white font-black text-xs sm:text-sm after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
                           : "text-white/60 hover:text-white"
                         }`}
                     >
@@ -642,7 +642,7 @@ export default function QuickViewModal() {
                 type="button"
                 onClick={() => setActiveTab("episodes")}
                 className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${activeTab === "episodes"
-                    ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                    ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
                     : "text-white/50 hover:text-white"
                   }`}
               >
@@ -654,7 +654,7 @@ export default function QuickViewModal() {
               type="button"
               onClick={() => setActiveTab("more_like_this")}
               className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${activeTab === "more_like_this"
-                  ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                  ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
                   : "text-white/50 hover:text-white"
                 }`}
             >
@@ -665,7 +665,7 @@ export default function QuickViewModal() {
               type="button"
               onClick={() => setActiveTab("details")}
               className={`pb-2.5 sm:pb-3 transition-all cursor-pointer relative whitespace-nowrap ${activeTab === "details"
-                  ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                  ? "text-white font-black text-xs sm:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
                   : "text-white/50 hover:text-white"
                 }`}
             >
@@ -685,7 +685,7 @@ export default function QuickViewModal() {
                 <select
                   value={selectedSeason}
                   onChange={(e) => setSelectedSeason(parseInt(e.target.value, 10))}
-                  className="bg-black/60 border border-white/15 rounded-lg sm:rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-bold text-white uppercase focus:outline-none focus:border-red-500 cursor-pointer"
+                  className="bg-black/60 border border-white/15 rounded-lg sm:rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-bold text-white uppercase focus:outline-none focus:border-accent cursor-pointer"
                 >
                   {details.seasons
                     .filter((s: any) => s.season_number > 0)
@@ -714,7 +714,7 @@ export default function QuickViewModal() {
                       <div
                         key={ep.episode_number}
                         onClick={() => handlePlayDirect(selectedSeason, ep.episode_number)}
-                        className="group/ep relative bg-white/5 border border-white/5 hover:border-red-600/60 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                        className="group/ep relative bg-white/5 border border-white/5 hover:border-accent/60 rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-[1.02] active:scale-95"
                       >
                         <div className="aspect-video w-full relative overflow-hidden bg-black/50">
                           <img
@@ -728,7 +728,7 @@ export default function QuickViewModal() {
                             loading="lazy"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/ep:opacity-100 transition-opacity flex items-center justify-center">
-                            <div className="h-8 w-8 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-600/50">
+                            <div className="h-8 w-8 rounded-full bg-accent text-white flex items-center justify-center shadow-lg shadow-accent/50">
                               <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24">
                                 <path d="M8 5v14l11-7z" />
                               </svg>
@@ -740,14 +740,14 @@ export default function QuickViewModal() {
                           {hasProg && epProg && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
                               <div
-                                className="h-full bg-red-600"
+                                className="h-full bg-accent"
                                 style={{ width: `${epProg.progressPercentage}%` }}
                               />
                             </div>
                           )}
                         </div>
                         <div className="p-2 space-y-0.5">
-                          <h6 className="text-[11px] font-bold text-white truncate group-hover/ep:text-red-400">
+                          <h6 className="text-[11px] font-bold text-white truncate group-hover/ep:text-accent">
                             {ep.episode_number}. {ep.name || `Episode ${ep.episode_number}`}
                           </h6>
                           {ep.runtime && (
@@ -775,7 +775,7 @@ export default function QuickViewModal() {
                       <div
                         key={rec.id}
                         onClick={() => openQuickView(rec)}
-                        className="group/rec relative aspect-2/3 rounded-xl overflow-hidden bg-black/40 border border-white/10 hover:border-red-600/60 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
+                        className="group/rec relative aspect-2/3 rounded-xl overflow-hidden bg-black/40 border border-white/10 hover:border-accent/60 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
                       >
                         <img
                           src={recImage}
@@ -808,7 +808,7 @@ export default function QuickViewModal() {
               {details?.cast && details.cast.length > 0 && (
                 <div className="space-y-3">
                   <h5 className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center gap-2">
-                    <span className="h-3 w-1 bg-red-600 rounded-full"></span>
+                    <span className="h-3 w-1 bg-accent rounded-full"></span>
                     Cast Members
                   </h5>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">

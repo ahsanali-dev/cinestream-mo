@@ -40,7 +40,7 @@ export default function WatchlistPage() {
                 clear();
               }
             }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-black uppercase tracking-widest transition-all cursor-pointer hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-accent/20 bg-accent/10 hover:bg-accent/20 text-accent text-xs font-black uppercase tracking-widest transition-all cursor-pointer hover:scale-105 active:scale-95"
           >
             <i className="ph-bold ph-trash text-sm"></i> Clear All
           </button>

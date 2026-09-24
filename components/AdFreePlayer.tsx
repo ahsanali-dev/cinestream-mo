@@ -1048,7 +1048,7 @@ export default function AdFreePlayer({
               <button
                 type="button"
                 onClick={onClose}
-                className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-red-600 border border-white/15 hover:border-red-500 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
+                className="h-9 w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-accent border border-white/15 hover:border-accent text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
                 title="Close Player (Esc)"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -1275,7 +1275,7 @@ export default function AdFreePlayer({
                 e.stopPropagation();
                 onClose();
               }}
-              className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-red-600 border border-white/15 hover:border-red-500 text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
+              className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full bg-white/10 hover:bg-accent border border-white/15 hover:border-accent text-white flex items-center justify-center transition-all shadow-xl cursor-pointer hover:scale-105 active:scale-95 shrink-0"
               title="Close Player (Esc)"
               aria-label="Close player"
             >
@@ -1302,7 +1302,7 @@ export default function AdFreePlayer({
                 type="button"
                 onClick={() => setActiveMenu("quality")}
                 className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
-                  activeMenu === "quality" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
+                  activeMenu === "quality" ? "text-accent" : "text-white/80 hover:text-white"
                 }`}
                 title="Quality"
               >
@@ -1310,7 +1310,7 @@ export default function AdFreePlayer({
                   <path d="M2 17h3v4H2v-4zm6-5h3v9H8v-9zm6-5h3v14h-3V7zm6-5h3v19h-3V2z" />
                 </svg>
                 {activeMenu === "quality" && (
-                  <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
+                  <div className="h-0.5 bg-accent w-full mt-1.5 rounded-full" />
                 )}
               </button>
 
@@ -1319,7 +1319,7 @@ export default function AdFreePlayer({
                 type="button"
                 onClick={() => setActiveMenu("subtitles")}
                 className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
-                  activeMenu === "subtitles" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
+                  activeMenu === "subtitles" ? "text-accent" : "text-white/80 hover:text-white"
                 }`}
                 title="Subtitles"
               >
@@ -1328,7 +1328,7 @@ export default function AdFreePlayer({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 10.5a1.5 1.5 0 00-1.5 1.5v0a1.5 1.5 0 001.5 1.5h1M16 10.5a1.5 1.5 0 00-1.5 1.5v0a1.5 1.5 0 001.5 1.5h1" />
                 </svg>
                 {activeMenu === "subtitles" && (
-                  <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
+                  <div className="h-0.5 bg-accent w-full mt-1.5 rounded-full" />
                 )}
               </button>
 
@@ -1337,7 +1337,7 @@ export default function AdFreePlayer({
                 type="button"
                 onClick={() => setActiveMenu("speed")}
                 className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
-                  activeMenu === "speed" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
+                  activeMenu === "speed" ? "text-accent" : "text-white/80 hover:text-white"
                 }`}
                 title="Playback Speed"
               >
@@ -1347,7 +1347,7 @@ export default function AdFreePlayer({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2 9h3M2 13h4" />
                 </svg>
                 {activeMenu === "speed" && (
-                  <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
+                  <div className="h-0.5 bg-accent w-full mt-1.5 rounded-full" />
                 )}
               </button>
 
@@ -1356,7 +1356,7 @@ export default function AdFreePlayer({
                 type="button"
                 onClick={() => setActiveMenu("audio")}
                 className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
-                  activeMenu === "audio" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
+                  activeMenu === "audio" ? "text-accent" : "text-white/80 hover:text-white"
                 }`}
                 title="Audio Languages"
               >
@@ -1367,7 +1367,7 @@ export default function AdFreePlayer({
                   <path d="M17 12a3 3 0 00-3 3v4a2 2 0 002 2h1v-4h-1v-2a1 1 0 011-1 1 1 0 011 1v2h-1v4h1a2 2 0 002-2v-4a3 3 0 00-3-3z" />
                 </svg>
                 {activeMenu === "audio" && (
-                  <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
+                  <div className="h-0.5 bg-accent w-full mt-1.5 rounded-full" />
                 )}
               </button>
 
@@ -1377,7 +1377,7 @@ export default function AdFreePlayer({
                   type="button"
                   onClick={() => setActiveMenu("servers")}
                   className={`flex flex-col items-center cursor-pointer transition-colors p-1 ${
-                    activeMenu === "servers" ? "text-[#ff4d5a]" : "text-white/80 hover:text-white"
+                    activeMenu === "servers" ? "text-accent" : "text-white/80 hover:text-white"
                   }`}
                   title="Change Server"
                 >
@@ -1390,7 +1390,7 @@ export default function AdFreePlayer({
                     <circle cx="6" cy="19.5" r="1" fill="currentColor" />
                   </svg>
                   {activeMenu === "servers" && (
-                    <div className="h-0.5 bg-red-600 w-full mt-1.5 rounded-full" />
+                    <div className="h-0.5 bg-accent w-full mt-1.5 rounded-full" />
                   )}
                 </button>
               )}
@@ -1411,19 +1411,19 @@ export default function AdFreePlayer({
 
           {/* Tab 1: Quality List */}
           {activeMenu === "quality" && (
-            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#dc2626_transparent]">
+            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#FF6A00_transparent]">
               {/* Auto Option */}
               <button
                 type="button"
                 onClick={() => changeQuality(-1)}
                 className={`w-full flex items-center px-4 py-2.5 text-left cursor-pointer transition-colors ${
                   currentQuality === -1
-                    ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                    ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                     : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                 }`}
               >
                 {currentQuality === -1 ? (
-                  <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                  <span className="text-accent mr-2.5 text-xs">▶</span>
                 ) : (
                   <span className="w-4 mr-2.5" />
                 )}
@@ -1451,12 +1451,12 @@ export default function AdFreePlayer({
                     onClick={() => changeQuality(q.index)}
                     className={`w-full flex items-center px-4 py-2.5 text-left cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                        ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                         : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                     }`}
                   >
                     {isSelected ? (
-                      <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                      <span className="text-accent mr-2.5 text-xs">▶</span>
                     ) : (
                       <span className="w-4 mr-2.5" />
                     )}
@@ -1469,7 +1469,7 @@ export default function AdFreePlayer({
 
           {/* Tab 2: Subtitles List */}
           {activeMenu === "subtitles" && (
-            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#dc2626_transparent]">
+            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#FF6A00_transparent]">
               <div className="text-center py-2 text-sm font-bold text-white/90 underline cursor-default">
                 Subtitle Settings
               </div>
@@ -1480,12 +1480,12 @@ export default function AdFreePlayer({
                 onClick={() => changeSubtitle(-1)}
                 className={`w-full flex items-center px-4 py-2.5 text-left cursor-pointer transition-colors ${
                   activeSubtitle === -1
-                    ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                    ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                     : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                 }`}
               >
                 {activeSubtitle === -1 ? (
-                  <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                  <span className="text-accent mr-2.5 text-xs">▶</span>
                 ) : (
                   <span className="w-4 mr-2.5" />
                 )}
@@ -1502,12 +1502,12 @@ export default function AdFreePlayer({
                     onClick={() => changeSubtitle(idx)}
                     className={`w-full flex items-center px-4 py-2.5 text-left cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                        ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                         : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                     }`}
                   >
                     {isSelected ? (
-                      <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                      <span className="text-accent mr-2.5 text-xs">▶</span>
                     ) : (
                       <span className="w-4 mr-2.5" />
                     )}
@@ -1520,7 +1520,7 @@ export default function AdFreePlayer({
 
           {/* Tab 3: Playback Speed List */}
           {activeMenu === "speed" && (
-            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#dc2626_transparent]">
+            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#FF6A00_transparent]">
               {[0.5, 1, 1.25, 1.5, 2].map((s) => {
                 const isSelected = playbackSpeed === s;
                 return (
@@ -1530,12 +1530,12 @@ export default function AdFreePlayer({
                     onClick={() => changePlaybackSpeed(s)}
                     className={`w-full flex items-center px-4 py-2.5 text-left cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                        ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                         : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                     }`}
                   >
                     {isSelected ? (
-                      <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                      <span className="text-accent mr-2.5 text-xs">▶</span>
                     ) : (
                       <span className="w-4 mr-2.5" />
                     )}
@@ -1548,7 +1548,7 @@ export default function AdFreePlayer({
 
           {/* Tab 4: Audio Languages List */}
           {activeMenu === "audio" && (
-            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#dc2626_transparent]">
+            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#FF6A00_transparent]">
               <div className="text-center py-1.5 text-xs font-bold text-white/50 uppercase tracking-wider cursor-default">
                 Available Multi-Server Audio
               </div>
@@ -1581,13 +1581,13 @@ export default function AdFreePlayer({
                       }}
                       className={`w-full flex items-center justify-between px-4 py-2.5 text-left cursor-pointer transition-colors ${
                         isSelected
-                          ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                          ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                           : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                       }`}
                     >
                       <div className="flex items-center min-w-0">
                         {isSelected ? (
-                          <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                          <span className="text-accent mr-2.5 text-xs">▶</span>
                         ) : (
                           <span className="w-4 mr-2.5" />
                         )}
@@ -1596,7 +1596,7 @@ export default function AdFreePlayer({
                       </div>
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase shrink-0 ml-2 ${
                         isCurrentServer
-                          ? "bg-red-600/30 text-red-300 border border-red-500/40"
+                          ? "bg-accent/20 text-accent border border-accent/40"
                           : "bg-white/10 text-white/60"
                       }`}>
                         {track.serverBadge || (track.serverId === "server2" ? "Netflix" : track.serverId === "server1" ? "1080p" : "Cloud")}
@@ -1607,9 +1607,9 @@ export default function AdFreePlayer({
               ) : parsedAudioTracks.length === 0 ? (
                 <button
                   type="button"
-                  className="w-full flex items-center px-4 py-2.5 text-left bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                  className="w-full flex items-center px-4 py-2.5 text-left bg-[#383838] border-l-4 border-accent text-accent font-bold"
                 >
-                  <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                  <span className="text-accent mr-2.5 text-xs">▶</span>
                   <span className="text-sm tracking-wide">English (Original)</span>
                 </button>
               ) : (
@@ -1622,12 +1622,12 @@ export default function AdFreePlayer({
                       onClick={() => changeAudioTrack(track.index)}
                       className={`w-full flex items-center px-4 py-2.5 text-left cursor-pointer transition-colors ${
                         isSelected
-                          ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                          ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                           : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                       }`}
                     >
                       {isSelected ? (
-                        <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                        <span className="text-accent mr-2.5 text-xs">▶</span>
                       ) : (
                         <span className="w-4 mr-2.5" />
                       )}
@@ -1641,7 +1641,7 @@ export default function AdFreePlayer({
 
           {/* Tab 5: Servers List */}
           {activeMenu === "servers" && (
-            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#dc2626_transparent]">
+            <div className="flex-1 overflow-y-auto py-2 [scrollbar-width:thin] [scrollbar-color:#FF6A00_transparent]">
               <div className="text-center py-1.5 text-xs font-bold text-white/50 uppercase tracking-wider cursor-default">
                 Select Stream Server
               </div>
@@ -1660,13 +1660,13 @@ export default function AdFreePlayer({
                     }}
                     className={`w-full flex items-center justify-between px-4 py-2.5 text-left cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-[#383838] border-l-4 border-red-600 text-green-500 font-bold"
+                        ? "bg-[#383838] border-l-4 border-accent text-accent font-bold"
                         : "text-white font-bold hover:bg-white/5 border-l-4 border-transparent"
                     }`}
                   >
                     <div className="flex items-center min-w-0">
                       {isSelected ? (
-                        <span className="text-green-500 mr-2.5 text-xs">▶</span>
+                        <span className="text-accent mr-2.5 text-xs">▶</span>
                       ) : (
                         <span className="w-4 mr-2.5" />
                       )}
@@ -1675,7 +1675,7 @@ export default function AdFreePlayer({
                     {s.badge && (
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase font-bold shrink-0 ml-2 ${
                         isSelected
-                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          ? "bg-accent/20 text-accent border border-accent/30"
                           : "bg-white/10 text-white/60"
                       }`}>
                         {s.badge}
@@ -1709,16 +1709,16 @@ export default function AdFreePlayer({
             className="absolute left-0 h-1 bg-white/40 rounded-full transition-all group-hover/bar:h-1.5 pointer-events-none"
           />
 
-          {/* Played track (red) */}
+          {/* Played track (accent orange) */}
           <div
             style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-            className="absolute left-0 h-1 bg-red-600 rounded-full transition-all group-hover/bar:h-1.5 shadow-[0_0_8px_rgba(229,9,20,0.8)] pointer-events-none"
+            className="absolute left-0 h-1 bg-accent rounded-full transition-all group-hover/bar:h-1.5 shadow-[0_0_8px_rgba(255,106,0,0.8)] pointer-events-none"
           />
 
           {/* Scrubber thumb */}
           <div
             style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-            className="absolute -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white shadow-md scale-0 group-hover/bar:scale-100 transition-transform pointer-events-none"
+            className="absolute -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-accent border-2 border-white shadow-md scale-0 group-hover/bar:scale-100 transition-transform pointer-events-none"
           />
 
           <input
@@ -1854,7 +1854,7 @@ export default function AdFreePlayer({
                 step={0.05}
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-14 sm:w-18 md:w-20 h-1 bg-white/30 accent-red-600 rounded-full cursor-pointer transition-all opacity-80 group-hover/vol:opacity-100"
+                className="w-14 sm:w-18 md:w-20 h-1 bg-white/30 accent-[#FF6A00] rounded-full cursor-pointer transition-all opacity-80 group-hover/vol:opacity-100"
                 aria-label="Volume level"
               />
             </div>
@@ -1897,7 +1897,7 @@ export default function AdFreePlayer({
               }
               className={`p-1 transition-transform hover:scale-110 active:scale-95 cursor-pointer flex items-center justify-center ${
                 activeMenu === "quality" || activeMenu === "speed"
-                  ? "text-red-500"
+                  ? "text-accent"
                   : "text-white hover:text-white/80"
               }`}
               title="Settings (Quality & Speed)"

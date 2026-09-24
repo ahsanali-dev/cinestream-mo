@@ -105,7 +105,7 @@ body {
 }
 
 .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #e50914 !important;
+  background: var(--primary) !important;
 }
 
 @supports not selector(::-webkit-scrollbar) {

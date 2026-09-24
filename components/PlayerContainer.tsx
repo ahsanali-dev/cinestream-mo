@@ -762,7 +762,7 @@ export default function PlayerContainer({
               {savedProgress && (
                 <div className="space-y-2 pt-1 animate-fade-in">
                   <div className="flex items-center gap-2 justify-center flex-wrap">
-                    <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-md">
+                    <span className="px-2 sm:px-2.5 py-0.5 rounded-full bg-accent text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-md">
                       Resume at {formatProgressTime(savedProgress.currentTime)}
                     </span>
                     <span className="text-[10px] sm:text-xs font-bold text-white/70">
@@ -772,7 +772,7 @@ export default function PlayerContainer({
 
                   <div className="w-36 sm:w-64 h-1 sm:h-1.5 bg-white/20 rounded-full overflow-hidden mx-auto shadow-inner">
                     <div
-                      className="h-full bg-red-600 rounded-full shadow-[0_0_10px_rgba(229,9,20,0.9)]"
+                      className="h-full bg-accent rounded-full shadow-[0_0_10px_rgba(255,106,0,0.9)]"
                       style={{ width: `${Math.min(100, Math.max(5, savedProgress.progressPercentage))}%` }}
                     />
                   </div>
@@ -823,7 +823,7 @@ export default function PlayerContainer({
               <div className="flex flex-col items-center justify-center gap-4 text-center p-8 max-w-md">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black border ${isUpcoming
                   ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                  : "bg-red-500/20 text-red-500 border-red-500/30"
+                  : "bg-accent/20 text-accent border-accent/30"
                   }`}>
                   {isUpcoming ? "📅" : "!"}
                 </div>
@@ -978,10 +978,10 @@ export default function PlayerContainer({
               }}
             />
             <ShareButton
-              title={title || "Watch on CineStream"}
-              text={`Watch ${title || ""}${releaseYear ? ` (${releaseYear})` : ""} in Full HD on CineStream! 🍿🎬`}
+              title={title || "Watch on MoviesZone"}
+              text={`Watch ${title || ""}${releaseYear ? ` (${releaseYear})` : ""} in Full HD on MoviesZone! 🍿🎬`}
               poster={posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : undefined}
-              url={`https://cinestream-mo.vercel.app/watch/${cleanSlug || (title ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : id)}?type=${type}`}
+              url={`https://movieszonestream.vercel.app/watch/${cleanSlug || (title ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") : id)}?type=${type}`}
             />
             {trailerKey && (
               <button
@@ -989,7 +989,7 @@ export default function PlayerContainer({
                 onClick={() => setIsTrailerOpen(true)}
                 className="flex items-center gap-2 rounded-xl px-4 py-2.5 sm:px-5 sm:py-3.5 text-xs md:text-sm font-black uppercase tracking-wider backdrop-blur-md transition-all duration-300 cursor-pointer bg-white/10 text-white hover:bg-white/20 border border-white/10 hover:border-white/20 hover:scale-105 active:scale-95 shadow-md"
               >
-                <i className="ph-fill ph-film-strip text-lg text-red-500"></i>
+                <i className="ph-fill ph-film-strip text-lg text-accent"></i>
                 <span>Trailer</span>
               </button>
             )}
@@ -1049,7 +1049,7 @@ export default function PlayerContainer({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
+                <span className="h-2 w-2 rounded-full bg-accent animate-pulse"></span>
                 Select Audio Language {displayLanguages.length > 0 && `(${displayLanguages.length} Available)`}
               </span>
               {selectedLanguage && (
@@ -1082,7 +1082,7 @@ export default function PlayerContainer({
                       handleSelectLanguage(track.name, track.serverId);
                     }}
                     className={`relative shrink-0 pb-2 text-xs md:text-sm font-bold transition-all cursor-pointer flex items-center gap-1.5 ${isSelected
-                      ? "text-white font-black text-sm md:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                      ? "text-white font-black text-sm md:text-base after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
                       : "text-white/60 hover:text-white"
                       }`}
                   >
@@ -1101,7 +1101,7 @@ export default function PlayerContainer({
               type="button"
               onClick={() => setActiveTab("episodes")}
               className={`pb-3 transition-all cursor-pointer relative whitespace-nowrap text-sm sm:text-base ${activeTab === "episodes"
-                ? "text-white font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+                ? "text-white font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
                 : "text-white/50 hover:text-white"
                 }`}
             >
@@ -1113,7 +1113,7 @@ export default function PlayerContainer({
             type="button"
             onClick={() => setActiveTab("more_like_this")}
             className={`pb-3 transition-all cursor-pointer relative whitespace-nowrap text-sm sm:text-base ${activeTab === "more_like_this"
-              ? "text-white font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+              ? "text-white font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
               : "text-white/50 hover:text-white"
               }`}
           >
@@ -1124,7 +1124,7 @@ export default function PlayerContainer({
             type="button"
             onClick={() => setActiveTab("details")}
             className={`pb-3 transition-all cursor-pointer relative whitespace-nowrap text-sm sm:text-base ${activeTab === "details"
-              ? "text-white font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-600 after:rounded-full"
+              ? "text-white font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-accent after:rounded-full"
               : "text-white/50 hover:text-white"
               }`}
           >
@@ -1277,7 +1277,7 @@ export default function PlayerContainer({
                           {hasEpProgress && epProg && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-10">
                               <div
-                                className="h-full bg-red-600 shadow-[0_0_8px_rgba(229,9,20,0.9)]"
+                                className="h-full bg-accent shadow-[0_0_8px_rgba(255,106,0,0.9)]"
                                 style={{ width: `${Math.min(100, Math.max(5, epProg.progressPercentage))}%` }}
                               />
                             </div>
@@ -1372,7 +1372,7 @@ export default function PlayerContainer({
             {overview && (
               <div className="space-y-2 bg-white/5 border border-white/5 rounded-2xl p-5 md:p-6">
                 <h5 className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center gap-2">
-                  <span className="h-3 w-1 bg-red-600 rounded-full"></span>
+                  <span className="h-3 w-1 bg-accent rounded-full"></span>
                   Storyline
                 </h5>
                 <p className="text-white/80 text-xs sm:text-sm leading-relaxed font-normal">
@@ -1385,7 +1385,7 @@ export default function PlayerContainer({
             {creditsCast && creditsCast.length > 0 && (
               <div className="space-y-4">
                 <h5 className="text-xs font-black uppercase tracking-wider text-white/50 flex items-center gap-2">
-                  <span className="h-3 w-1 bg-red-600 rounded-full"></span>
+                  <span className="h-3 w-1 bg-accent rounded-full"></span>
                   Cast Members ({creditsCast.length})
                 </h5>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-3">
@@ -1486,7 +1486,7 @@ export default function PlayerContainer({
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-[#0f0f12]/95">
               <div className="flex items-center gap-2.5 truncate">
-                <span className="h-2 w-2 rounded-full bg-red-600 animate-pulse"></span>
+                <span className="h-2 w-2 rounded-full bg-accent animate-pulse"></span>
                 <span className="text-xs sm:text-sm font-black italic uppercase tracking-wider text-white truncate">
                   {title} • Official Trailer
                 </span>

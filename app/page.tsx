@@ -154,7 +154,7 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <CategoryIconCard title="Action" icon="ph-fill ph-sword" color="bg-red-500/20 text-red-500" link="/explore/genre/Action" />
+          <CategoryIconCard title="Action" icon="ph-fill ph-sword" color="bg-orange-500/20 text-[#FF6A00]" link="/explore/genre/Action" />
           <CategoryIconCard title="Comedy" icon="ph-fill ph-mask-happy" color="bg-yellow-500/20 text-yellow-500" link="/explore/genre/Comedy" />
           <CategoryIconCard title="Horror" icon="ph-fill ph-skull" color="bg-purple-500/20 text-purple-500" link="/explore/genre/Horror" />
           <CategoryIconCard title="Animation" icon="ph-fill ph-paint-brush" color="bg-blue-500/20 text-blue-500" link="/explore/genre/Animation" />
