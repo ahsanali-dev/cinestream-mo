@@ -49,10 +49,13 @@ const Sidebar = () => {
 
             {/* Direct App Download Button at Bottom */}
             <div className="w-full px-3">
-                <button
-                    type="button"
-                    onClick={() => openInstallModal("android")}
-                    className="group/btn relative flex h-12 w-full cursor-pointer items-center justify-start rounded-2xl bg-gradient-to-r from-accent/20 to-accent/5 border border-accent/30 hover:border-accent hover:from-accent hover:to-[#ff7b1a] text-accent hover:text-white px-3 transition-all duration-300 shadow-[0_0_15px_rgba(255,106,0,0.15)] hover:shadow-[0_0_20px_rgba(255,106,0,0.4)]"
+                <Link
+                    href="/app"
+                    className={`group/btn relative flex h-12 w-full cursor-pointer items-center justify-start rounded-2xl border transition-all duration-300 shadow-[0_0_15px_rgba(255,106,0,0.15)] hover:shadow-[0_0_20px_rgba(255,106,0,0.4)] px-3 ${
+                        pathname === '/app'
+                            ? 'bg-accent border-accent text-white shadow-accent/30'
+                            : 'bg-gradient-to-r from-accent/20 to-accent/5 border-accent/30 hover:border-accent hover:from-accent hover:to-[#ff7b1a] text-accent hover:text-white'
+                    }`}
                     title="Download Official Android App (100% Ad-Free)"
                 >
                     <div className="min-w-[32px] flex items-center justify-center">
@@ -64,7 +67,7 @@ const Sidebar = () => {
                     <span className="hidden group-hover/sidebar:inline-block ml-auto text-[8px] bg-accent text-white font-black px-1.5 py-0.5 rounded uppercase shadow-sm">
                         APK
                     </span>
-                </button>
+                </Link>
             </div>
         </aside>
     );

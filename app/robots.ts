@@ -8,8 +8,8 @@ export default function robots(): MetadataRoute.Robots {
       disallow: ["/profile", "/watchlist"],
     },
     sitemap: [
-      "https://cinestream-mo.vercel.app/sitemap.xml",
-      "https://cinestream-mo.vercel.app/feed.xml",
+      "https://movieszonestream.vercel.app/sitemap.xml",
+      "https://movieszonestream.vercel.app/feed.xml",
     ],
   };
 }

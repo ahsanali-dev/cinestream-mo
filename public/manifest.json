@@ -1,12 +1,35 @@
 {
-  "name": "MoviesZone",
+  "name": "MoviesZone - Free HD Movies & TV Shows",
   "short_name": "MoviesZone",
-  "description": "Free HD Movie & TV Series Streaming Experience",
+  "description": "Stream the latest movies, Bollywood hits, Hindi Dubbed cinema, and popular TV series in 1080p HD with zero ads.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#080A0F",
   "theme_color": "#080A0F",
   "orientation": "any",
+  "categories": ["entertainment", "movies", "video", "multimedia"],
+  "shortcuts": [
+    {
+      "name": "Trending Movies",
+      "url": "/movies",
+      "description": "Explore trending Hollywood and Bollywood movies"
+    },
+    {
+      "name": "TV Series",
+      "url": "/tv-shows",
+      "description": "Watch popular TV shows and web series"
+    },
+    {
+      "name": "Bollywood & Hindi Cinema",
+      "url": "/explore/language/hi",
+      "description": "Stream Hindi Dubbed movies and Bollywood hits"
+    },
+    {
+      "name": "Explore & Search",
+      "url": "/explore",
+      "description": "Search thousands of movies and genres"
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192x192.png",

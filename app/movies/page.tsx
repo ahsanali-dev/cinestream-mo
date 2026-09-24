@@ -4,14 +4,27 @@ import { getTrendingMovies, enrichWithPlatform } from '@/lib/tmdb';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "Feature Films | Watch Movies Online in HD",
-  description: "Explore the latest cinematic masterpieces on MoviesZone. From high-octane action to heart-wrenching dramas, stream trending movies in full HD for free.",
+  title: "Watch Movies Online Free in HD | Bollywood, Hollywood, Hindi Dubbed - MoviesZone",
+  description: "Explore the latest blockbuster movies in 1080p Full HD on MoviesZone. Watch Bollywood, South Indian Hindi Dubbed, and Hollywood cinema with zero ads. The ultimate KatmovieHD and MovieBox alternative.",
+  keywords: [
+    "Watch movies online free",
+    "Hindi dubbed movies HD",
+    "Dual audio movies 1080p",
+    "KatmovieHD alternative",
+    "MovieBox movies",
+    "TheMovieBox stream",
+    "NetMirror movies online",
+    "Vegamovies hindi",
+    "Bollyflix full movie",
+    "Bollywood blockbusters free",
+    "Hollywood movies in Hindi"
+  ],
   alternates: {
     canonical: "/movies",
   },
   openGraph: {
-    title: "Feature Films & Blockbusters | MoviesZone",
-    description: "Stream the latest trending movies and cinematic masterpieces in high definition on MoviesZone.",
+    title: "Watch Movies Online Free in 1080p HD | MoviesZone",
+    description: "Stream the latest trending movies and cinematic masterpieces in high definition with Hindi Dubbed audio on MoviesZone.",
     url: "https://movieszonestream.vercel.app/movies",
     siteName: "MoviesZone",
     type: "website",
@@ -26,8 +39,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Feature Films & Blockbusters | MoviesZone",
-    description: "Stream trending movies in full HD for free on MoviesZone.",
+    title: "Watch Feature Films & Blockbusters | MoviesZone",
+    description: "Stream trending movies in full HD for free on MoviesZone. MovieBox and KatmovieHD alternative.",
     images: ["/icon-512x512.png"],
   },
 };

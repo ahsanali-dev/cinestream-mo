@@ -4,11 +4,12 @@ import { getTrendingMovies, getPopularTVSeries, GENRE_IDS, LANGUAGE_CODES } from
 export const revalidate = 86400; // Cache sitemap for 24 hours
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://cinestream-mo.vercel.app";
+  const baseUrl = "https://movieszonestream.vercel.app";
 
   // Static core routes
   const staticRoutes: MetadataRoute.Sitemap = [
     "",
+    "/app",
     "/explore",
     "/movies",
     "/tv-shows",
@@ -17,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: "daily" as const,
-    priority: route === "" ? 1.0 : 0.9,
+    priority: route === "" ? 1.0 : route === "/app" ? 0.95 : 0.9,
   }));
 
   // Genre landing pages
@@ -29,8 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // Regional cinema landing pages
-  const regionalRoutes: MetadataRoute.Sitemap = Object.keys(LANGUAGE_CODES).map((region) => ({
-    url: `${baseUrl}/explore/region/${encodeURIComponent(region)}`,
+  const regionalRoutes: MetadataRoute.Sitemap = Object.entries(LANGUAGE_CODES).map(([region, info]) => ({
+    url: `${baseUrl}/explore/language/${encodeURIComponent(info.code)}`,
     lastModified: new Date(),
     changeFrequency: "daily" as const,
     priority: 0.8,

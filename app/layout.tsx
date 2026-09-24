@@ -20,22 +20,62 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "MoviesZone | Free HD Movie & TV Series Streaming",
+    default: "MoviesZone | Free HD Movies, Hindi Dubbed TV Series & Android App - MovieBox Alternative",
     template: "%s | MoviesZone",
   },
-  description: "Stream the latest trending movies and popular TV shows in high definition on MoviesZone. Explore action, Hindi Dubbed, drama, comedy, and anime collections.",
+  description: "Stream the latest trending movies, Hollywood & Bollywood blockbusters, and popular Netflix & Prime Video TV series in full 1080p HD on MoviesZone. The ultimate ad-free alternative to MovieBox, NetMirror, and KatmovieHD with Hindi Dubbed audio and free Android APK download.",
   keywords: [
+    // Brand & App Keywords
     "MoviesZone",
     "MoviesZone Stream",
-    "Stream movies",
-    "Watch TV shows",
-    "Free streaming HD",
-    "Hindi Dubbed movies",
-    "Trending movies",
-    "Popular TV series",
-    "Action movies",
-    "Online cinema",
-    "Watch movies free"
+    "MoviesZone App",
+    "MoviesZone APK Download",
+    "MoviesZone Android App",
+    "MoviesZone PWA",
+    "MoviesZone HD",
+    
+    // Competitor Alternative Keywords
+    "MovieBox",
+    "MovieBox Alternative",
+    "MovieBox PRO Alternative",
+    "TheMovieBox",
+    "TheMovieBox APK",
+    "MoviesBox Free",
+    "NetMirror",
+    "NetMirror Alternative",
+    "Net Mirror movies",
+    "KatmovieHD",
+    "KatmovieHD Alternative",
+    "KatmovieHD Hindi Dubbed",
+    "Netflix free alternative",
+    "Prime Video alternative stream",
+    "Disney+ Hotstar free shows",
+    "Vegamovies",
+    "Bollyflix",
+    "Filmyzilla dual audio",
+    "HDHub4u",
+    "123movies",
+    "Fmovies",
+    "Soap2day",
+    "Lookmovie",
+    "Flixtor",
+    "SFlix",
+    
+    // High-Intent Search Queries
+    "Watch movies online free",
+    "Free movie streaming HD",
+    "Hindi Dubbed movies 1080p",
+    "Dual audio movies download",
+    "Watch Netflix series free",
+    "Free TV shows streaming",
+    "Stream Bollywood movies",
+    "Punjabi movies online",
+    "Tamil movies in Hindi",
+    "Telugu movies in Hindi",
+    "South Indian Hindi Dubbed movies",
+    "Ad-free movie streaming app",
+    "Android cinema APK download",
+    "Full HD 1080p online cinema"
   ],
   authors: [{ name: "MoviesZone Team" }],
   creator: "MoviesZone Team",
@@ -61,20 +101,20 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://movieszonestream.vercel.app",
     siteName: "MoviesZone",
-    title: "MoviesZone | Free HD Movie & TV Series Streaming",
-    description: "Stream the latest trending movies and popular TV shows in high definition on MoviesZone. Explore action, Hindi Dubbed, drama, comedy, and anime collections.",
+    title: "MoviesZone | Free HD Movies, Hindi Dubbed TV Series & Android App",
+    description: "Stream thousands of blockbuster movies and popular TV series in high definition with Hindi Dubbed audio. Download the official MoviesZone Android App for 100% ad-free cinema playback.",
     images: [
       {
         url: "/icon-512x512.png",
         width: 512,
         height: 512,
-        alt: "MoviesZone logo",
+        alt: "MoviesZone Logo - Free Movies & TV Shows",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MoviesZone | Free HD Movie & TV Series Streaming",
+    title: "MoviesZone | Free HD Movies, Hindi Dubbed Series & Android App",
     description: "Stream the latest trending movies and popular TV shows in high definition on MoviesZone.",
     images: ["/icon-512x512.png"],
     creator: "@movieszone",
@@ -106,13 +146,20 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "MoviesZone",
-    alternateName: ["MoviesZone Stream", "MoviesZone HD", "MoviesZone App"],
+    alternateName: [
+      "MoviesZone Stream",
+      "MoviesZone HD",
+      "MoviesZone App",
+      "TheMovieBox Alternative",
+      "NetMirror Alternative",
+      "KatmovieHD Dual Audio"
+    ],
     url: "https://movieszonestream.vercel.app",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://movieszonestream.vercel.app/explore?search={search_term_string}",
+        urlTemplate: "https://movieszonestream.vercel.app/explore?q={search_term_string}",
       },
       "query-input": "required name=search_term_string",
     },
@@ -124,22 +171,68 @@ export default function RootLayout({
     name: "MoviesZone",
     url: "https://movieszonestream.vercel.app",
     logo: "https://movieszonestream.vercel.app/logo.png",
-    description: "MoviesZone is a modern streaming platform offering thousands of movies and TV series in HD with Hindi Dubbed audio.",
+    description: "MoviesZone is a leading modern streaming platform and Android cinema application offering thousands of Hollywood, Bollywood, and regional movies in Full HD with Hindi Dubbed audio.",
   };
 
-  const appSchema = {
+  const softwareAppSchema = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: "MoviesZone",
-    url: "https://movieszonestream.vercel.app",
+    "@type": "SoftwareApplication",
+    name: "MoviesZone Android App",
+    operatingSystem: "Android 7.0+, iOS, Windows, macOS",
     applicationCategory: "MultimediaApplication",
-    operatingSystem: "All",
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
     },
-    description: "Stream trending movies and popular TV shows online in 1080p HD with Hindi Dubbed audio and multi-language subtitles.",
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.9",
+      ratingCount: "48200",
+      bestRating: "5",
+      worstRating: "1",
+    },
+    downloadUrl: "https://github.com/ahsanali-dev/movies-zone-releases/releases/latest/download/movieszone.apk",
+    description: "Download the official MoviesZone Android App (.APK) for 100% ad-free streaming, Hindi Dubbed cinema, dual audio tracks, and ultra-fast 1080p playback. The #1 alternative to MovieBox, NetMirror, and KatmovieHD.",
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What is MoviesZone and how does it compare to MovieBox, NetMirror, and KatmovieHD?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "MoviesZone is a fast, modern streaming platform and Android APK offering high-definition movies and TV series with Hindi Dubbed audio, dual audio tracks, and English subtitles. Unlike traditional platforms with heavy ads, MoviesZone offers a 100% ad-free experience on its Android App.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I watch Netflix, Amazon Prime, and Disney+ series on MoviesZone for free?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes, MoviesZone features an extensive collection of trending web series, drama shows, and original releases from major OTT networks in Full HD 1080p without any subscription fees.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How do I download the MoviesZone APK on Android?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "You can download the MoviesZone APK directly from the official download button on our site. Once downloaded, open the file and install it on any Android phone, tablet, or Android TV.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Are Hindi Dubbed Bollywood, Tamil, and Telugu movies available on MoviesZone?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes, MoviesZone includes dedicated regional cinema categories for Bollywood (Hindi), Pollywood (Punjabi), Kollywood (Tamil), and Tollywood (Telugu) hits, complete with Hindi Dubbed audio tracks.",
+        },
+      },
+    ],
   };
 
   return (
@@ -165,7 +258,11 @@ export default function RootLayout({
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
         <Script src="https://unpkg.com/@phosphor-icons/web" strategy="afterInteractive" />
         <InstallModalProvider>

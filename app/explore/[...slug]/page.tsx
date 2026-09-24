@@ -28,18 +28,18 @@ export async function generateMetadata({ params }: ExplorePageProps): Promise<Me
   let description = "Discover our handpicked selection of movies and TV shows.";
 
   if (type === 'trending') {
-    title = "Trending Movies";
-    description = "Stream the most popular and trending movies right now in HD on MoviesZone.";
+    title = "Trending Movies & Blockbusters in HD | MoviesZone";
+    description = "Stream the most popular and trending movies right now in Full HD on MoviesZone. The best free alternative to MovieBox and NetMirror.";
   } else if (type === 'tv') {
-    title = "Popular TV Shows";
-    description = "Discover and watch trending and popular TV series online in HD on MoviesZone.";
+    title = "Popular TV Shows & Netflix Series in HD | MoviesZone";
+    description = "Discover and watch trending and popular TV series online in HD on MoviesZone with zero ads.";
   } else if (type === 'genre' && subType) {
-    title = `${subType} Movies Collection`;
-    description = `Explore our handpicked collection of ${subType} movies and series in full HD on MoviesZone.`;
+    title = `${subType} Movies & Series Collection | MoviesZone`;
+    description = `Explore our handpicked collection of ${subType} movies and series in full HD on MoviesZone. KatmovieHD and MovieBox alternative.`;
   } else if ((type === 'language' || type === 'lang') && subType) {
     const lang = resolveLanguageInfo(subType);
-    title = `${lang.label} Movies`;
-    description = `Stream the best ${lang.label} movies and blockbusters in HD on MoviesZone.`;
+    title = `${lang.label} Movies & Cinema Hits in HD | MoviesZone`;
+    description = `Stream the best ${lang.label} movies, blockbusters, and Hindi Dubbed cinema in HD on MoviesZone.`;
   }
 
   const path = `/explore/${slug.join("/")}`;
@@ -48,6 +48,15 @@ export async function generateMetadata({ params }: ExplorePageProps): Promise<Me
   return {
     title,
     description,
+    keywords: [
+      `${title} free`,
+      "MovieBox alternative",
+      "NetMirror stream",
+      "KatmovieHD dual audio",
+      "Hindi dubbed movies",
+      "Watch movies online free",
+      "MoviesZone HD stream"
+    ],
     alternates: {
       canonical: path,
     },
@@ -109,7 +118,7 @@ export default async function ViewAllPage({ params }: ExplorePageProps) {
       "@type": "ListItem",
       "position": index + 1,
       "name": movie.title || movie.name,
-      "url": `https://cinestream-mo.vercel.app/watch/${movie.id}?type=${movie.name ? "tv" : "movie"}`,
+      "url": `https://movieszonestream.vercel.app/watch/${movie.id}?type=${movie.name ? "tv" : "movie"}`,
       "image": movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
     })),
   };

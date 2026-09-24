@@ -4,14 +4,27 @@ import { getPopularTVSeries, enrichWithPlatform } from '@/lib/tmdb';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "TV Series | Watch Popular TV Shows Online in HD",
-  description: "Dive into binge-worthy television on MoviesZone. From epic fantasies to intense crime thrillers, stream popular TV series in high definition with zero ads.",
+  title: "Watch TV Shows & Netflix Series Online Free in HD | MoviesZone",
+  description: "Dive into binge-worthy television on MoviesZone. Stream top trending Netflix originals, Amazon Prime Video series, HBO dramas, and Hindi Dubbed web shows in 1080p Full HD for free.",
+  keywords: [
+    "Watch TV shows online free",
+    "Watch Netflix series free",
+    "Prime video shows free stream",
+    "Hindi dubbed web series",
+    "NetMirror TV shows",
+    "TheMovieBox series",
+    "MovieBox PRO TV series",
+    "KatmovieHD web series",
+    "Binge watch TV shows 1080p",
+    "Korean drama in Hindi",
+    "Free web series online"
+  ],
   alternates: {
     canonical: "/tv-shows",
   },
   openGraph: {
-    title: "Popular TV Series & Binge-Worthy Shows | MoviesZone",
-    description: "Stream the best and trending TV series online in high definition on MoviesZone.",
+    title: "Watch Popular TV Shows & Netflix Series Online Free | MoviesZone",
+    description: "Stream the best and trending TV series online in high definition on MoviesZone with zero subscription fees.",
     url: "https://movieszonestream.vercel.app/tv-shows",
     siteName: "MoviesZone",
     type: "website",
@@ -26,8 +39,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Popular TV Series & Shows | MoviesZone",
-    description: "Stream popular TV series in HD for free on MoviesZone.",
+    title: "Watch TV Series & Netflix Shows Free | MoviesZone",
+    description: "Stream popular TV series and web shows in HD for free on MoviesZone. MovieBox and NetMirror alternative.",
     images: ["/icon-512x512.png"],
   },
 };

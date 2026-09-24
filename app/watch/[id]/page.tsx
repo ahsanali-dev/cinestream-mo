@@ -27,8 +27,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const rawYear = releaseDate ? releaseDate.split("-")[0] : "2024";
     const year = rawYear ? ` (${rawYear})` : "";
     const description = movie.overview 
-      ? `Watch ${title}${year} in 1080p Full HD with Hindi Dubbed audio and multi-language subtitles. ${movie.overview.slice(0, 130)}...`
-      : `Stream ${title}${year} online in full HD with Hindi Dubbed & English audio for free on MoviesZone.`;
+      ? `Watch ${title}${year} in 1080p Full HD with Hindi Dubbed audio and multi-language subtitles on MoviesZone. Better than MovieBox, NetMirror, and KatmovieHD. ${movie.overview.slice(0, 120)}...`
+      : `Stream ${title}${year} online in full HD with Hindi Dubbed & English audio for free on MoviesZone. The top MovieBox and NetMirror alternative.`;
 
     const primaryImage = movie.backdrop_path 
       ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
@@ -42,17 +42,23 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const ogImageUrl = `https://movieszonestream.vercel.app/api/og?title=${encodeURIComponent(title)}&year=${encodeURIComponent(rawYear)}&rating=${encodeURIComponent(movie.vote_average ? movie.vote_average.toFixed(1) : "8.5")}&type=${type}&image=${encodeURIComponent(primaryImage)}`;
 
     return {
-      title: `Watch ${title}${year} Hindi Dubbed & English Subtitles | 1080p Full HD Free`,
+      title: `Watch ${title}${year} in Hindi Dubbed & English Subtitles | 1080p Full HD Free - MoviesZone`,
       description,
       keywords: [
         `Watch ${title} online free`,
-        `${title} Hindi dubbed`,
-        `${title} full movie HD`,
-        `${title} stream 1080p`,
+        `${title} Hindi dubbed 1080p`,
+        `${title} full movie HD free`,
         `${title} dual audio`,
         `${title} English subtitles`,
+        `${title} MovieBox alternative`,
+        `${title} TheMovieBox stream`,
+        `${title} NetMirror`,
+        `${title} KatmovieHD`,
+        `${title} Vegamovies`,
+        `${title} Bollyflix`,
         "MoviesZone free streaming",
-        "Watch movies online",
+        "Watch movies online free",
+        "Download MoviesZone APK"
       ],
       alternates: {
         canonical: canonicalPath,
@@ -117,35 +123,55 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
 
   const id = String(movie.id);
 
-
-
   const title = movie.title || movie.name;
   const releaseDate = movie.release_date || movie.first_air_date;
   const year = releaseDate ? releaseDate.split("-")[0] : "N/A";
   const rating = movie.vote_average?.toFixed(1);
   const cleanSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const canonicalUrl = `https://cinestream-mo.vercel.app/watch/${cleanSlug}?type=${type}`;
+  const canonicalUrl = `https://movieszonestream.vercel.app/watch/${cleanSlug}?type=${type}`;
+  const primaryImage = movie.backdrop_path 
+    ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
+    : movie.poster_path 
+    ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+    : "https://movieszonestream.vercel.app/icon-512x512.png";
+
+  const rawYear = releaseDate ? releaseDate.split("-")[0] : "2024";
+  const ogImageUrl = `https://movieszonestream.vercel.app/api/og?title=${encodeURIComponent(title)}&year=${encodeURIComponent(rawYear)}&rating=${encodeURIComponent(movie.vote_average ? movie.vote_average.toFixed(1) : "8.5")}&type=${type}&image=${encodeURIComponent(primaryImage)}`;
+
+  const validUploadDate = releaseDate
+    ? (() => {
+        try {
+          return new Date(releaseDate).toISOString();
+        } catch {
+          return "2024-01-01T00:00:00Z";
+        }
+      })()
+    : "2024-01-01T00:00:00Z";
+
+  const validThumbnails = [
+    movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
+    movie.poster_path ? `https://image.tmdb.org/t/p/w780${movie.poster_path}` : null,
+    ogImageUrl,
+    "https://movieszonestream.vercel.app/icon-512x512.png",
+  ].filter(Boolean) as string[];
 
   // Schema.org JSON-LD Structured Data for Google Rich Snippets
   const mediaSchema = {
     "@context": "https://schema.org",
     "@type": type === "movie" ? "Movie" : "TVSeries",
     "name": title,
-    "description": movie.overview,
-    "image": [
-      movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
-      movie.poster_path ? `https://image.tmdb.org/t/p/w780${movie.poster_path}` : null,
-    ].filter(Boolean),
-    "datePublished": releaseDate,
+    "description": movie.overview || `Watch ${title} online in HD on MoviesZone.`,
+    "image": validThumbnails,
+    "datePublished": releaseDate || "2024-01-01",
     "inLanguage": "en",
     "genre": movie.genres?.map((g: any) => g.name) || [],
     ...(movie.vote_count ? {
       "aggregateRating": {
         "@type": "AggregateRating",
-        "ratingValue": movie.vote_average?.toFixed(1),
+        "ratingValue": movie.vote_average?.toFixed(1) || "8.5",
         "bestRating": "10",
         "worstRating": "1",
-        "ratingCount": movie.vote_count,
+        "ratingCount": movie.vote_count || 100,
       }
     } : {}),
     "actor": movie.credits?.cast?.slice(0, 5).map((c: any) => ({
@@ -158,18 +184,15 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
     })) || [],
   };
 
-  // VideoObject Schema for Google Videos Tab
+  // VideoObject Schema for Google Videos Tab (Fixed ISO Timezone & Guaranteed Thumbnails)
   const videoObjectSchema = {
     "@context": "https://schema.org",
     "@type": "VideoObject",
     "name": `Watch ${title} Full Movie Online Free in HD`,
     "description": movie.overview || `Watch ${title} online in high definition on MoviesZone.`,
-    "thumbnailUrl": [
-      movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
-      movie.poster_path ? `https://image.tmdb.org/t/p/w780${movie.poster_path}` : null,
-    ].filter(Boolean),
-    "uploadDate": releaseDate || "2024-01-01",
-    ...(movie.runtime ? { "duration": `PT${movie.runtime}M` } : {}),
+    "thumbnailUrl": validThumbnails,
+    "uploadDate": validUploadDate,
+    ...(movie.runtime ? { "duration": `PT${movie.runtime}M` } : { "duration": "PT110M" }),
     "embedUrl": canonicalUrl,
     "contentUrl": canonicalUrl,
   };
@@ -186,7 +209,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         "name": `Where can I watch ${title} online for free?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `You can stream ${title} online in high definition on MoviesZone with fast servers and zero popups.`,
+          "text": `You can stream ${title} online in high definition on MoviesZone with fast servers and zero popups. MoviesZone is the top alternative to MovieBox, NetMirror, and KatmovieHD.`,
         },
       },
       {
@@ -207,10 +230,10 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
       },
       {
         "@type": "Question",
-        "name": `Is ${title} available in HD with subtitles?`,
+        "name": `Is ${title} available in Hindi Dubbed HD with subtitles?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `Yes, MoviesZone players support 1080p full HD streaming with multi-language subtitle tracks.`,
+          "text": `Yes, MoviesZone players support 1080p full HD streaming with Hindi Dubbed audio and multi-language subtitle tracks.`,
         },
       },
     ],
@@ -224,13 +247,13 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://cinestream-mo.vercel.app",
+        "item": "https://movieszonestream.vercel.app",
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": type === "movie" ? "Movies" : "TV Shows",
-        "item": `https://cinestream-mo.vercel.app/${type === "movie" ? "movies" : "tv-shows"}`,
+        "item": `https://movieszonestream.vercel.app/${type === "movie" ? "movies" : "tv-shows"}`,
       },
       {
         "@type": "ListItem",

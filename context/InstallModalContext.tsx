@@ -54,13 +54,11 @@ export const InstallModalProvider: React.FC<{ children: React.ReactNode }> = ({ 
       window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
       window.addEventListener("appinstalled", handleAppInstalled);
 
-      // Auto-popup modal on first visit in the session
-      const hasShownThisSession = sessionStorage.getItem("mz_app_modal_shown");
-      if (!hasShownThisSession && !isStandalone && !isIOSStandalone) {
+      // Auto-popup modal on every site visit
+      if (!isStandalone && !isIOSStandalone) {
         const timer = setTimeout(() => {
           setIsOpen(true);
-          sessionStorage.setItem("mz_app_modal_shown", "true");
-        }, 1500);
+        }, 1000);
 
         return () => {
           clearTimeout(timer);

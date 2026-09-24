@@ -47,7 +47,7 @@ export default function DownloadAppModal() {
             Official Android App
           </span>
           <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">
-            v1.0.0
+            80.6 MB
           </span>
         </div>
 
@@ -142,15 +142,23 @@ export default function DownloadAppModal() {
           {/* TAB 1: ANDROID NATIVE APK DOWNLOAD */}
           {activePlatform === "android" && (
             <div className="space-y-3 animate-fade-in">
-              <a
-                href={ANDROID_APK_DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => {
+                  const link = document.createElement("a");
+                  link.href = ANDROID_APK_DOWNLOAD_URL;
+                  link.setAttribute("download", "MoviesZone.apk");
+                  link.setAttribute("target", "_blank");
+                  link.setAttribute("rel", "noopener noreferrer");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
                 className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-accent to-[#ff7b1a] hover:from-[#ff7b1a] hover:to-accent text-white font-black italic uppercase text-xs sm:text-sm tracking-wider flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(255,106,0,0.6)] hover:shadow-[0_0_35px_rgba(255,106,0,0.8)] hover:scale-[1.02] active:scale-95 transition-all cursor-pointer border border-accent/40 text-center"
               >
                 <i className="ph-bold ph-download-simple text-lg"></i>
                 <span>Download Android App (.APK)</span>
-              </a>
+              </button>
 
               <div className="flex items-center justify-between text-[10px] text-white/50 px-1">
                 <span className="flex items-center gap-1">
@@ -165,22 +173,38 @@ export default function DownloadAppModal() {
 
           {/* TAB 2: APPLE IOS (PWA / ADD TO HOME SCREEN) */}
           {activePlatform === "ios" && (
-            <div className="space-y-2.5 text-xs text-white/80 animate-fade-in bg-white/5 p-3.5 rounded-2xl border border-white/10">
-              <div className="text-[11px] font-black uppercase text-accent tracking-wider mb-1 flex items-center gap-1.5">
-                <i className="ph-bold ph-info"></i>
-                <span>Native iOS App Coming Soon • Use Web App</span>
+            <div className="space-y-3 text-xs text-white/80 animate-fade-in bg-white/5 p-4 rounded-2xl border border-white/10">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-1">
+                <span className="text-[11px] font-black uppercase text-accent tracking-wider flex items-center gap-1.5">
+                  <i className="ph-fill ph-apple-logo text-sm"></i>
+                  Install on iPhone &amp; iPad
+                </span>
+                <span className="text-[9px] bg-white/10 text-white/70 px-2 py-0.5 rounded-full font-bold uppercase">
+                  PWA Web App
+                </span>
               </div>
-              <div className="flex items-start gap-2.5">
-                <span className="h-5 w-5 rounded-md bg-accent/20 text-accent font-black text-[10px] flex items-center justify-center shrink-0">1</span>
-                <p className="leading-snug">Open Safari and tap the <strong>Share</strong> button <i className="ph-bold ph-export text-accent align-middle"></i> at the bottom.</p>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <span className="h-5 w-5 rounded-md bg-accent/20 text-accent font-black text-[10px] flex items-center justify-center shrink-0">2</span>
-                <p className="leading-snug">Scroll down and choose <strong>"Add to Home Screen"</strong> <i className="ph-bold ph-plus-square text-accent align-middle"></i>.</p>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <span className="h-5 w-5 rounded-md bg-accent/20 text-accent font-black text-[10px] flex items-center justify-center shrink-0">3</span>
-                <p className="leading-snug">Tap <strong>"Add"</strong> in the top-right corner to launch full-screen cinema mode.</p>
+
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                  <span className="h-6 w-6 rounded-lg bg-accent text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">1</span>
+                  <p className="leading-snug text-xs text-white/90">
+                    Open in <strong className="text-white">Safari</strong> and tap the <strong className="text-accent">Share</strong> icon <i className="ph-bold ph-export text-accent text-sm align-middle inline-block mx-0.5"></i> at the bottom.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                  <span className="h-6 w-6 rounded-lg bg-accent text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">2</span>
+                  <p className="leading-snug text-xs text-white/90">
+                    Scroll down and tap <strong className="text-accent">"Add to Home Screen"</strong> <i className="ph-bold ph-plus-square text-accent text-sm align-middle inline-block mx-0.5"></i>.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5">
+                  <span className="h-6 w-6 rounded-lg bg-accent text-white font-black text-xs flex items-center justify-center shrink-0 shadow-md">3</span>
+                  <p className="leading-snug text-xs text-white/90">
+                    Tap <strong className="text-accent">"Add"</strong> in the top-right corner to launch full-screen cinema app.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -226,10 +250,14 @@ export default function DownloadAppModal() {
           >
             Continue in Browser
           </button>
-          <span className="text-[10px] font-bold text-accent uppercase tracking-widest flex items-center gap-1">
-            <i className="ph-fill ph-check-circle text-accent"></i>
-            Free HD Streaming
-          </span>
+          <a
+            href="/app"
+            onClick={closeInstallModal}
+            className="text-[11px] font-bold text-accent hover:underline uppercase tracking-wider flex items-center gap-1"
+          >
+            <span>App Page &amp; Guide</span>
+            <i className="ph-bold ph-arrow-right text-xs"></i>
+          </a>
         </div>
       </div>
     </div>
