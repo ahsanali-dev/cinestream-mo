@@ -19,11 +19,11 @@ const Sidebar = () => {
             <Link href="/" className="mb-12 flex flex-col items-center justify-center cursor-pointer transition-transform duration-300 hover:scale-110">
                 <img 
                     src="/logo.png" 
-                    alt="CineStream Logo" 
-                    className="w-10 h-10 object-contain drop-shadow-[0_0_14px_rgba(231,76,60,0.6)]" 
+                    alt="MoviesZone Logo" 
+                    className="w-10 h-10 object-contain drop-shadow-[0_0_14px_rgba(255,106,0,0.6)]" 
                 />
                 <span className="hidden group-hover/sidebar:block text-[10px] font-black tracking-widest text-accent italic uppercase mt-1.5 transition-all">
-                    CineStream
+                    MoviesZone
                 </span>
             </Link>
             <nav className="flex w-full flex-col gap-4">

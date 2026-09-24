@@ -209,8 +209,8 @@ export default function Header() {
         className="fixed top-0 left-0 md:left-20 right-0 z-50 flex h-16 md:h-20 items-center justify-between px-4 sm:px-8 md:px-16 transition-all duration-500 bg-transparent border-b border-transparent"
       >
         <Link href="/" className="md:hidden flex items-center gap-2 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95 outline-none focus:outline-none select-none">
-          <img src="/logo.png" alt="CineStream" className="w-7 h-7 object-contain" />
-          <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">CineStream</span>
+          <img src="/logo.png" alt="MoviesZone" className="w-8 h-8 object-contain" />
+          <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">MoviesZone</span>
         </Link>
         <div className="hidden md:block" />
         <div className="flex items-center gap-2 sm:gap-4 shrink-0"></div>
@@ -228,8 +228,8 @@ export default function Header() {
     >
       {/* Brand logo (visible only on mobile because sidebar handles desktop) */}
       <Link href="/" className="md:hidden flex items-center gap-2 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95">
-        <img src="/logo.png" alt="CineStream" className="w-7 h-7 object-contain" />
-        <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">CineStream</span>
+        <img src="/logo.png" alt="MoviesZone" className="w-8 h-8 object-contain" />
+        <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">MoviesZone</span>
       </Link>
 
       {/* Spacing element to push search to the right on desktop */}
@@ -260,7 +260,7 @@ export default function Header() {
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Search CineStream..."
+                  placeholder="Search MoviesZone..."
                   value={query}
                   onChange={(e) => handleQueryChange(e.target.value)}
                   onFocus={() => query.trim().length >= 2 && setShowSuggestions(true)}
@@ -376,8 +376,8 @@ export default function Header() {
           <div className="group relative shrink-0">
             <button
               onClick={handleInstallClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-gradient-to-r from-accent/30 to-accent/10 hover:from-accent/40 hover:to-accent/20 border border-accent/30 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(231,76,60,0.15)] active:scale-95 cursor-pointer shrink-0"
-              aria-label="Install CineStream App"
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-gradient-to-r from-accent/30 to-accent/10 hover:from-accent/40 hover:to-accent/20 border border-accent/30 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(255,106,0,0.15)] active:scale-95 cursor-pointer shrink-0"
+              aria-label="Install MoviesZone App"
             >
               <i className="ph-bold ph-arrow-line-down text-xs text-accent"></i>
               <span className="hidden sm:inline">Install App</span>
@@ -386,7 +386,7 @@ export default function Header() {
             
             {/* Tooltip / Suggestion on Hover */}
             <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-white/10 bg-[#0f0f12]/95 backdrop-blur-xl p-3 text-[10px] font-bold text-white/70 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none z-[250] text-center leading-relaxed">
-              Install <span className="text-accent font-black">CineStream</span> as a mobile or desktop app for a premium, full-screen experience.
+              Install <span className="text-accent font-black">MoviesZone</span> as a mobile or desktop app for a premium, full-screen experience.
               {/* Little triangle arrow at top */}
               <div className="absolute -top-1.5 right-10 h-3 w-3 rotate-45 border-t border-l border-white/10 bg-[#0f0f12]"></div>
             </div>
@@ -546,17 +546,17 @@ export default function Header() {
 
             {/* App Branding Info */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-[#b03a2e] flex items-center justify-center shadow-lg border border-accent/40 shrink-0">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-[#FF4500] flex items-center justify-center shadow-lg border border-accent/40 shrink-0">
                 <i className="ph-fill ph-play text-white text-2xl animate-pulse"></i>
               </div>
               <div>
-                <h3 className="text-lg font-black italic uppercase tracking-wider text-white">CineStream App</h3>
+                <h3 className="text-lg font-black italic uppercase tracking-wider text-white">MoviesZone App</h3>
                 <p className="text-xs font-bold text-accent uppercase tracking-widest">Premium Streaming Experience</p>
               </div>
             </div>
 
             <p className="text-xs text-white/70 leading-relaxed mb-6">
-              CineStream ko apney mobile ya desktop par install karein taake aapko full-screen, fast load times aur offline functions k sath premium cinema experience mil sakey.
+              MoviesZone ko apney mobile ya desktop par install karein taake aapko full-screen, fast load times aur offline functions k sath premium cinema experience mil sakey.
             </p>
 
             {/* OS Selection Tabs */}
@@ -641,7 +641,7 @@ export default function Header() {
                   <div className="flex items-start gap-3">
                     <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">3</div>
                     <p className="leading-normal">
-                      Ya phir browser menu open karein aur <strong>"Install CineStream"</strong> select karein.
+                      Ya phir browser menu open karein aur <strong>"Install MoviesZone"</strong> select karein.
                     </p>
                   </div>
                 </div>

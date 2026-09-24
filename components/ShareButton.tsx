@@ -29,14 +29,14 @@ export default function ShareButton({ title, text, url, poster }: ShareButtonPro
     if (typeof window !== "undefined") {
       return url || window.location.href;
     }
-    return url || "https://cinestream-mo.vercel.app";
+    return url || "https://movieszonestream.vercel.app";
   };
 
   const handleShare = async () => {
     const shareUrl = getShareUrl();
     const shareData = {
-      title: `${title} | CineStream`,
-      text: text || `Watch ${title} in High Definition on CineStream!`,
+      title: `${title} | MoviesZone`,
+      text: text || `Watch ${title} in High Definition on MoviesZone!`,
       url: shareUrl,
     };
 
@@ -70,7 +70,7 @@ export default function ShareButton({ title, text, url, poster }: ShareButtonPro
 
   const shareUrl = getShareUrl();
   const encodedUrl = encodeURIComponent(shareUrl);
-  const encodedText = encodeURIComponent(text || `Watch ${title} in HD on CineStream! 🍿🎬`);
+  const encodedText = encodeURIComponent(text || `Watch ${title} in HD on MoviesZone! 🍿🎬`);
 
   return (
     <div ref={menuRef} className="relative inline-block">
@@ -115,10 +115,10 @@ export default function ShareButton({ title, text, url, poster }: ShareButtonPro
             )}
             <div className="flex-1 min-w-0">
               <span className="text-[9px] font-black text-accent tracking-wider uppercase block">
-                CineStream Preview
+                MoviesZone Preview
               </span>
               <h4 className="text-xs font-bold text-white truncate">{title}</h4>
-              <p className="text-[10px] text-white/50 truncate">Watch Free in HD on CineStream</p>
+              <p className="text-[10px] text-white/50 truncate">Watch Free in HD on MoviesZone</p>
             </div>
           </div>
 

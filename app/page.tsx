@@ -22,7 +22,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Home | Watch Movies & TV Series Online",
-  description: "Stream trending movies, Bollywood, Punjabi, Tamil, Telugu hits, and popular TV shows in high definition on CineStream.",
+  description: "Stream trending movies, Bollywood, Punjabi, Tamil, Telugu hits, and popular TV shows in high definition on MoviesZone.",
 };
 
 export default async function Home() {
@@ -49,7 +49,7 @@ export default async function Home() {
   ]);
 
   return (
-    <main className="min-h-screen pb-24 bg-[#0a0a0b] -mt-20">
+    <main className="min-h-screen pb-24 bg-[#080A0F] -mt-20">
       <Hero />
       {/* <AdBanner /> */}
 

@@ -1,11 +1,11 @@
 {
-  "name": "CineStream",
-  "short_name": "CineStream",
-  "description": "Premium Movie & Series Streaming Experience",
+  "name": "MoviesZone",
+  "short_name": "MoviesZone",
+  "description": "Free HD Movie & TV Series Streaming Experience",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0b",
-  "theme_color": "#0a0a0b",
+  "background_color": "#080A0F",
+  "theme_color": "#080A0F",
   "orientation": "any",
   "icons": [
     {

@@ -17,7 +17,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     
     if (!movie) {
       return {
-        title: "Content Not Found | CineStream",
+        title: "Content Not Found | MoviesZone",
         description: "The requested movie or TV show could not be found.",
       };
     }
@@ -28,18 +28,18 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const year = rawYear ? ` (${rawYear})` : "";
     const description = movie.overview 
       ? `Watch ${title}${year} in 1080p Full HD with Hindi Dubbed audio and multi-language subtitles. ${movie.overview.slice(0, 130)}...`
-      : `Stream ${title}${year} online in full HD with Hindi Dubbed & English audio for free on CineStream.`;
+      : `Stream ${title}${year} online in full HD with Hindi Dubbed & English audio for free on MoviesZone.`;
 
     const primaryImage = movie.backdrop_path 
       ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
       : movie.poster_path 
       ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
-      : "https://cinestream-mo.vercel.app/icon-512x512.png";
+      : "https://movieszonestream.vercel.app/icon-512x512.png";
 
     const cleanSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const canonicalPath = `/watch/${cleanSlug}?type=${type}`;
-    const watchUrl = `https://cinestream-mo.vercel.app${canonicalPath}`;
-    const ogImageUrl = `https://cinestream-mo.vercel.app/api/og?title=${encodeURIComponent(title)}&year=${encodeURIComponent(rawYear)}&rating=${encodeURIComponent(movie.vote_average ? movie.vote_average.toFixed(1) : "8.5")}&type=${type}&image=${encodeURIComponent(primaryImage)}`;
+    const watchUrl = `https://movieszonestream.vercel.app${canonicalPath}`;
+    const ogImageUrl = `https://movieszonestream.vercel.app/api/og?title=${encodeURIComponent(title)}&year=${encodeURIComponent(rawYear)}&rating=${encodeURIComponent(movie.vote_average ? movie.vote_average.toFixed(1) : "8.5")}&type=${type}&image=${encodeURIComponent(primaryImage)}`;
 
     return {
       title: `Watch ${title}${year} Hindi Dubbed & English Subtitles | 1080p Full HD Free`,
@@ -51,17 +51,17 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         `${title} stream 1080p`,
         `${title} dual audio`,
         `${title} English subtitles`,
-        "CineStream free streaming",
+        "MoviesZone free streaming",
         "Watch movies online",
       ],
       alternates: {
         canonical: canonicalPath,
       },
       openGraph: {
-        title: `Watch ${title}${year} Hindi Dubbed & English | CineStream`,
+        title: `Watch ${title}${year} Hindi Dubbed & English | MoviesZone`,
         description,
         url: watchUrl,
-        siteName: "CineStream",
+        siteName: "MoviesZone",
         locale: "en_US",
         type: type === "movie" ? "video.movie" : "video.tv_show",
         images: [
@@ -69,23 +69,23 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
             url: ogImageUrl,
             width: 1200,
             height: 630,
-            alt: `Watch ${title} on CineStream`,
+            alt: `Watch ${title} on MoviesZone`,
             type: "image/png",
           },
         ],
       },
       twitter: {
         card: "summary_large_image",
-        title: `Watch ${title}${year} Hindi Dubbed & English | CineStream`,
+        title: `Watch ${title}${year} Hindi Dubbed & English | MoviesZone`,
         description,
         images: [ogImageUrl],
-        creator: "@cinestream",
+        creator: "@movieszone",
       },
     };
   } catch (error) {
     return {
-      title: "Watch Movies & TV Shows in HD | CineStream",
-      description: "Stream movies and TV series online in high definition with Hindi Dubbed audio on CineStream.",
+      title: "Watch Movies & TV Shows in HD | MoviesZone",
+      description: "Stream movies and TV series online in high definition with Hindi Dubbed audio on MoviesZone.",
     };
   }
 }
@@ -163,7 +163,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
     "@context": "https://schema.org",
     "@type": "VideoObject",
     "name": `Watch ${title} Full Movie Online Free in HD`,
-    "description": movie.overview || `Watch ${title} online in high definition on CineStream.`,
+    "description": movie.overview || `Watch ${title} online in high definition on MoviesZone.`,
     "thumbnailUrl": [
       movie.backdrop_path ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` : null,
       movie.poster_path ? `https://image.tmdb.org/t/p/w780${movie.poster_path}` : null,
@@ -186,7 +186,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         "name": `Where can I watch ${title} online for free?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `You can stream ${title} online in high definition on CineStream with fast servers and zero popups.`,
+          "text": `You can stream ${title} online in high definition on MoviesZone with fast servers and zero popups.`,
         },
       },
       {
@@ -210,7 +210,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         "name": `Is ${title} available in HD with subtitles?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `Yes, CineStream players support 1080p full HD streaming with multi-language subtitle tracks.`,
+          "text": `Yes, MoviesZone players support 1080p full HD streaming with multi-language subtitle tracks.`,
         },
       },
     ],

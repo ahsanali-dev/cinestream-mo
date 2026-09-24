@@ -29,21 +29,21 @@ export async function generateMetadata({ params }: ExplorePageProps): Promise<Me
 
   if (type === 'trending') {
     title = "Trending Movies";
-    description = "Stream the most popular and trending movies right now in HD on CineStream.";
+    description = "Stream the most popular and trending movies right now in HD on MoviesZone.";
   } else if (type === 'tv') {
     title = "Popular TV Shows";
-    description = "Discover and watch trending and popular TV series online in HD on CineStream.";
+    description = "Discover and watch trending and popular TV series online in HD on MoviesZone.";
   } else if (type === 'genre' && subType) {
     title = `${subType} Movies Collection`;
-    description = `Explore our handpicked collection of ${subType} movies and series in full HD on CineStream.`;
+    description = `Explore our handpicked collection of ${subType} movies and series in full HD on MoviesZone.`;
   } else if ((type === 'language' || type === 'lang') && subType) {
     const lang = resolveLanguageInfo(subType);
     title = `${lang.label} Movies`;
-    description = `Stream the best ${lang.label} movies and blockbusters in HD on CineStream.`;
+    description = `Stream the best ${lang.label} movies and blockbusters in HD on MoviesZone.`;
   }
 
   const path = `/explore/${slug.join("/")}`;
-  const fullUrl = `https://cinestream-mo.vercel.app${path}`;
+  const fullUrl = `https://movieszonestream.vercel.app${path}`;
 
   return {
     title,
@@ -52,23 +52,23 @@ export async function generateMetadata({ params }: ExplorePageProps): Promise<Me
       canonical: path,
     },
     openGraph: {
-      title: `${title} | CineStream`,
+      title: `${title} | MoviesZone`,
       description,
       url: fullUrl,
-      siteName: "CineStream",
+      siteName: "MoviesZone",
       type: "website",
       images: [
         {
           url: "/icon-512x512.png",
           width: 512,
           height: 512,
-          alt: "CineStream",
+          alt: "MoviesZone",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${title} | CineStream`,
+      title: `${title} | MoviesZone`,
       description,
       images: ["/icon-512x512.png"],
     },

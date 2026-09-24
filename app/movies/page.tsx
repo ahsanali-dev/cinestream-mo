@@ -5,29 +5,29 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "Feature Films | Watch Movies Online in HD",
-  description: "Explore the latest cinematic masterpieces on CineStream. From high-octane action to heart-wrenching dramas, stream trending movies in full HD for free.",
+  description: "Explore the latest cinematic masterpieces on MoviesZone. From high-octane action to heart-wrenching dramas, stream trending movies in full HD for free.",
   alternates: {
     canonical: "/movies",
   },
   openGraph: {
-    title: "Feature Films & Blockbusters | CineStream",
-    description: "Stream the latest trending movies and cinematic masterpieces in high definition on CineStream.",
-    url: "https://cinestream-mo.vercel.app/movies",
-    siteName: "CineStream",
+    title: "Feature Films & Blockbusters | MoviesZone",
+    description: "Stream the latest trending movies and cinematic masterpieces in high definition on MoviesZone.",
+    url: "https://movieszonestream.vercel.app/movies",
+    siteName: "MoviesZone",
     type: "website",
     images: [
       {
         url: "/icon-512x512.png",
         width: 512,
         height: 512,
-        alt: "CineStream Movies",
+        alt: "MoviesZone Movies",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Feature Films & Blockbusters | CineStream",
-    description: "Stream trending movies in full HD for free on CineStream.",
+    title: "Feature Films & Blockbusters | MoviesZone",
+    description: "Stream trending movies in full HD for free on MoviesZone.",
     images: ["/icon-512x512.png"],
   },
 };
@@ -39,18 +39,18 @@ export default async function MoviesPage() {
   const itemListSchema = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "name": "Trending Feature Films on CineStream",
+    "name": "Trending Feature Films on MoviesZone",
     "itemListElement": (movies || []).slice(0, 20).map((movie: any, index: number) => ({
       "@type": "ListItem",
       "position": index + 1,
       "name": movie.title,
-      "url": `https://cinestream-mo.vercel.app/watch/${movie.id}?type=movie`,
+      "url": `https://movieszonestream.vercel.app/watch/${movie.id}?type=movie`,
       "image": movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
     })),
   };
 
   return (
-    <div className="min-h-screen p-8 md:p-16 animate-fade-in bg-[#0a0a0b]">
+    <div className="min-h-screen p-8 md:p-16 animate-fade-in bg-[#080A0F]">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}

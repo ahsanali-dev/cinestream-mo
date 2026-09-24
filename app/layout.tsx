@@ -9,7 +9,7 @@ import { QuickViewProvider } from "@/context/QuickViewContext";
 import QuickViewModal from "@/components/QuickViewModal";
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0b",
+  themeColor: "#080A0F",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -18,27 +18,28 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "CineStream | Premium Movie & TV Series Streaming",
-    template: "%s | CineStream",
+    default: "MoviesZone | Free HD Movie & TV Series Streaming",
+    template: "%s | MoviesZone",
   },
-  description: "Stream the latest trending movies and popular TV shows in high definition on CineStream. Explore action, horror, comedy, and animation collections.",
+  description: "Stream the latest trending movies and popular TV shows in high definition on MoviesZone. Explore action, Hindi Dubbed, drama, comedy, and anime collections.",
   keywords: [
-    "CineStream",
+    "MoviesZone",
+    "MoviesZone Stream",
     "Stream movies",
     "Watch TV shows",
     "Free streaming HD",
+    "Hindi Dubbed movies",
     "Trending movies",
     "Popular TV series",
     "Action movies",
-    "Horror films",
     "Online cinema",
     "Watch movies free"
   ],
-  authors: [{ name: "CineStream Team" }],
-  creator: "CineStream Team",
-  publisher: "CineStream",
+  authors: [{ name: "MoviesZone Team" }],
+  creator: "MoviesZone Team",
+  publisher: "MoviesZone",
   manifest: "/manifest.json",
-  metadataBase: new URL("https://cinestream-mo.vercel.app"),
+  metadataBase: new URL("https://movieszonestream.vercel.app"),
   alternates: {
     canonical: "/",
   },
@@ -56,25 +57,25 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://cinestream-mo.vercel.app",
-    siteName: "CineStream",
-    title: "CineStream | Premium Movie & TV Series Streaming",
-    description: "Stream the latest trending movies and popular TV shows in high definition on CineStream. Explore action, horror, comedy, and animation collections.",
+    url: "https://movieszonestream.vercel.app",
+    siteName: "MoviesZone",
+    title: "MoviesZone | Free HD Movie & TV Series Streaming",
+    description: "Stream the latest trending movies and popular TV shows in high definition on MoviesZone. Explore action, Hindi Dubbed, drama, comedy, and anime collections.",
     images: [
       {
         url: "/icon-512x512.png",
         width: 512,
         height: 512,
-        alt: "CineStream logo",
+        alt: "MoviesZone logo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "CineStream | Premium Movie & TV Series Streaming",
-    description: "Stream the latest trending movies and popular TV shows in high definition on CineStream.",
+    title: "MoviesZone | Free HD Movie & TV Series Streaming",
+    description: "Stream the latest trending movies and popular TV shows in high definition on MoviesZone.",
     images: ["/icon-512x512.png"],
-    creator: "@cinestream",
+    creator: "@movieszone",
   },
   icons: {
     icon: [
@@ -90,7 +91,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "CineStream",
+    title: "MoviesZone",
   },
 };
 
@@ -102,14 +103,14 @@ export default function RootLayout({
   const websiteSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "CineStream",
-    alternateName: ["CineStream Movies", "CineStream HD"],
-    url: "https://cinestream-mo.vercel.app",
+    name: "MoviesZone",
+    alternateName: ["MoviesZone Stream", "MoviesZone HD", "MoviesZone App"],
+    url: "https://movieszonestream.vercel.app",
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://cinestream-mo.vercel.app/explore?search={search_term_string}",
+        urlTemplate: "https://movieszonestream.vercel.app/explore?search={search_term_string}",
       },
       "query-input": "required name=search_term_string",
     },
@@ -118,17 +119,17 @@ export default function RootLayout({
   const orgSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "CineStream",
-    url: "https://cinestream-mo.vercel.app",
-    logo: "https://cinestream-mo.vercel.app/logo.png",
-    description: "CineStream is a modern streaming platform offering thousands of movies and TV series in HD with Hindi Dubbed audio.",
+    name: "MoviesZone",
+    url: "https://movieszonestream.vercel.app",
+    logo: "https://movieszonestream.vercel.app/logo.png",
+    description: "MoviesZone is a modern streaming platform offering thousands of movies and TV series in HD with Hindi Dubbed audio.",
   };
 
   const appSchema = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "CineStream",
-    url: "https://cinestream-mo.vercel.app",
+    name: "MoviesZone",
+    url: "https://movieszonestream.vercel.app",
     applicationCategory: "MultimediaApplication",
     operatingSystem: "All",
     offers: {
@@ -146,10 +147,10 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://image.tmdb.org" />
         <link rel="preconnect" href="https://api.themoviedb.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.themoviedb.org" />
-        <link rel="alternate" type="application/rss+xml" title="CineStream RSS Feed" href="/feed.xml" />
+        <link rel="alternate" type="application/rss+xml" title="MoviesZone RSS Feed" href="/feed.xml" />
       </head>
       <body 
-        className="flex min-h-screen bg-[#0a0a0b] text-white antialiased"
+        className="flex min-h-screen bg-[#080A0F] text-white antialiased"
         suppressHydrationWarning
       >
         <script
