@@ -7,6 +7,8 @@ import Header from "@/components/Header";
 import PWARegistration from "@/components/PWARegistration";
 import { QuickViewProvider } from "@/context/QuickViewContext";
 import QuickViewModal from "@/components/QuickViewModal";
+import { InstallModalProvider } from "@/context/InstallModalContext";
+import DownloadAppModal from "@/components/DownloadAppModal";
 
 export const viewport: Viewport = {
   themeColor: "#080A0F",
@@ -166,16 +168,19 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }}
         />
         <Script src="https://unpkg.com/@phosphor-icons/web" strategy="afterInteractive" />
-        <QuickViewProvider>
-          <PWARegistration />
-          <Sidebar />
-          <Header />
-          <div className="flex-1 md:ml-20 w-full overflow-x-hidden pb-16 md:pb-0 pt-20">
-            {children}
-          </div>
-          <BottomNav />
-          <QuickViewModal />
-        </QuickViewProvider>
+        <InstallModalProvider>
+          <QuickViewProvider>
+            <PWARegistration />
+            <Sidebar />
+            <Header />
+            <div className="flex-1 md:ml-20 w-full overflow-x-hidden pb-16 md:pb-0 pt-20">
+              {children}
+            </div>
+            <BottomNav />
+            <QuickViewModal />
+            <DownloadAppModal />
+          </QuickViewProvider>
+        </InstallModalProvider>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { searchMovies } from "@/lib/tmdb";
+import { useInstallModal } from "@/context/InstallModalContext";
 
 interface TMDBItem {
   id: number;
@@ -23,12 +24,10 @@ export default function Header() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [showInstallModal, setShowInstallModal] = useState(false);
-  const [deviceOS, setDeviceOS] = useState<"ios" | "android" | "desktop">("desktop");
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const { isInstalled, openInstallModal } = useInstallModal();
 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,55 +48,8 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Listen for PWA installation prompt and check installed status
-  useEffect(() => {
-    const checkInstalledStatus = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isIOSStandalone = (window.navigator as any).standalone === true;
-      setIsInstalled(isStandalone || isIOSStandalone);
-    };
-
-    checkInstalledStatus();
-
-    // Detect OS for custom instructions
-    const userAgent = navigator.userAgent.toLowerCase();
-    if (/iphone|ipad|ipod/.test(userAgent)) {
-      setDeviceOS("ios");
-    } else if (/android/.test(userAgent)) {
-      setDeviceOS("android");
-    } else {
-      setDeviceOS("desktop");
-    }
-
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setShowInstallModal(false);
-      setDeferredPrompt(null);
-    };
-
-    window.addEventListener("beforeinstallprompt" as any, handleBeforeInstallPrompt);
-    window.addEventListener("appinstalled", handleAppInstalled);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt" as any, handleBeforeInstallPrompt);
-      window.removeEventListener("appinstalled", handleAppInstalled);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`PWA Installation Prompt Choice: ${outcome}`);
-      setDeferredPrompt(null);
-    } else {
-      setShowInstallModal(true);
-    }
+  const handleInstallClick = () => {
+    openInstallModal("android");
   };
 
   // Handle clearing suggestions inside input handler to prevent synchronous setState inside useEffect
@@ -526,138 +478,6 @@ export default function Header() {
                 Type above to search
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Install App Instruction Dialog */}
-      {showInstallModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fade-in">
-          {/* Modal Card */}
-          <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#0f0f12]/95 p-6 shadow-2xl animate-scale-in text-left">
-            {/* Close Button */}
-            <button
-              onClick={() => setShowInstallModal(false)}
-              className="absolute top-4 right-4 h-8 w-8 flex items-center justify-center rounded-full border border-white/5 bg-white/5 text-[#a0a0a0] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              aria-label="Close dialog"
-            >
-              <i className="ph-bold ph-x"></i>
-            </button>
-
-            {/* App Branding Info */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-accent to-[#FF4500] flex items-center justify-center shadow-lg border border-accent/40 shrink-0">
-                <i className="ph-fill ph-play text-white text-2xl animate-pulse"></i>
-              </div>
-              <div>
-                <h3 className="text-lg font-black italic uppercase tracking-wider text-white">MoviesZone App</h3>
-                <p className="text-xs font-bold text-accent uppercase tracking-widest">Premium Streaming Experience</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-white/70 leading-relaxed mb-6">
-              MoviesZone ko apney mobile ya desktop par install karein taake aapko full-screen, fast load times aur offline functions k sath premium cinema experience mil sakey.
-            </p>
-
-            {/* OS Selection Tabs */}
-            <div className="grid grid-cols-3 gap-1 p-1 bg-black/40 rounded-xl border border-white/5 mb-6">
-              {(["android", "ios", "desktop"] as const).map((os) => (
-                <button
-                  key={os}
-                  onClick={() => setDeviceOS(os)}
-                  className={`py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer ${
-                    deviceOS === os
-                      ? "bg-accent text-white shadow-md font-black"
-                      : "text-white/40 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {os === "ios" ? "iOS" : os === "android" ? "Android" : "Desktop"}
-                </button>
-              ))}
-            </div>
-
-            {/* Instructions based on OS */}
-            <div className="space-y-4">
-              {deviceOS === "ios" && (
-                <div className="flex flex-col gap-4 text-xs text-white/80">
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">1</div>
-                    <p className="leading-normal">
-                      Safari browser k nichey menu bar me <strong>Share</strong> button <i className="ph-bold ph-export text-accent ml-0.5 align-middle"></i> par tap karein.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">2</div>
-                    <p className="leading-normal">
-                      Share menu ko nichey scroll karein aur <strong>"Add to Home Screen"</strong> <i className="ph-bold ph-plus-square text-accent ml-0.5 align-middle"></i> select karein.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">3</div>
-                    <p className="leading-normal">
-                      Top-right corner me <strong>"Add"</strong> button par tap karein install mukammal karne k liye.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {deviceOS === "android" && (
-                <div className="flex flex-col gap-4 text-xs text-white/80">
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">1</div>
-                    <p className="leading-normal">
-                      Browser k top-right corner me <strong>Menu</strong> button <i className="ph-bold ph-dots-three-vertical text-accent ml-0.5 align-middle"></i> (three dots) par tap karein.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">2</div>
-                    <p className="leading-normal">
-                      List me se <strong>"Install app"</strong> ya <strong>"Add to Home screen"</strong> select karein.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">3</div>
-                    <p className="leading-normal">
-                      Screen par aane wali prompt ko confirm karein.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {deviceOS === "desktop" && (
-                <div className="flex flex-col gap-4 text-xs text-white/80">
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">1</div>
-                    <p className="leading-normal">
-                      Apney desktop browser (Chrome/Edge/Brave) k URL bar ko dekhein.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">2</div>
-                    <p className="leading-normal">
-                      URL k sath majood <strong>Install</strong> icon <i className="ph-bold ph-download-simple text-accent ml-0.5 align-middle"></i> (downward arrow) par click karein.
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="h-6 w-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-accent font-black">3</div>
-                    <p className="leading-normal">
-                      Ya phir browser menu open karein aur <strong>"Install MoviesZone"</strong> select karein.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Note */}
-            <div className="mt-8 pt-4 border-t border-white/5 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/30 uppercase tracking-wider">PWA Technology</span>
-              <button
-                onClick={() => setShowInstallModal(false)}
-                className="px-4 py-2 bg-accent/20 hover:bg-accent/30 text-white border border-accent/20 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer font-black"
-              >
-                Samajh Agaya
-              </button>
-            </div>
           </div>
         </div>
       )}
