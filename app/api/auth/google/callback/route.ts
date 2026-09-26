@@ -48,10 +48,13 @@ export async function GET(req: Request) {
         </div>
         <script>
           try {
+            if (window.ReactNativeWebView) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: "GOOGLE_AUTH_ERROR", error: ${JSON.stringify(errorMsg)} }));
+            }
             if (window.opener) {
               window.opener.postMessage({ type: "GOOGLE_AUTH_ERROR", error: ${JSON.stringify(errorMsg)} }, window.location.origin);
               setTimeout(() => window.close(), 1200);
-            } else {
+            } else if (!window.ReactNativeWebView) {
               setTimeout(() => { window.location.href = "/"; }, 2000);
             }
           } catch (e) {
@@ -175,10 +178,14 @@ export async function GET(req: Request) {
             localStorage.setItem("cinestream_auth_user", JSON.stringify(authData.user));
           } catch(e) {}
 
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: "GOOGLE_AUTH_SUCCESS", ...authData }));
+          }
+
           if (window.opener) {
             window.opener.postMessage({ type: "GOOGLE_AUTH_SUCCESS", ...authData }, window.location.origin);
             setTimeout(() => window.close(), 300);
-          } else {
+          } else if (!window.ReactNativeWebView) {
             window.location.href = "/";
           }
         </script>

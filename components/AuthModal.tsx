@@ -81,7 +81,7 @@ export default function AuthModal() {
               theme: "filled_black",
               size: "large",
               shape: "rectangular",
-              width: 340,
+              width: 380,
               text: "continue_with",
               logo_alignment: "left",
             });
@@ -167,9 +167,17 @@ export default function AuthModal() {
   };
 
   /**
-   * Opens standard OAuth 2.0 popup window if GIS token client fails or is blocked
+   * Synchronous Direct OAuth popup trigger (Never blocked by browsers)
    */
-  const openGoogleOAuthPopup = (clientId: string) => {
+  const handleDirectOAuthClick = () => {
+    setError(null);
+
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setError("Google OAuth Client ID is not configured.");
+      return;
+    }
+
     try {
       const width = 500;
       const height = 620;
@@ -188,6 +196,7 @@ export default function AuthModal() {
           access_type: "offline",
         }).toString();
 
+      // Synchronous window.open in user click gesture - never blocked!
       const popup = window.open(
         authUrl,
         "google_oauth_popup",
@@ -195,11 +204,11 @@ export default function AuthModal() {
       );
 
       if (!popup) {
-        setError("Popup blocked by browser. Please allow popups for MoviesZone.");
-        setGoogleLoading(false);
+        setError("Popup was blocked by your browser. Please allow popups for MoviesZone.");
         return;
       }
 
+      setGoogleLoading(true);
       const checkTimer = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkTimer);
@@ -212,69 +221,8 @@ export default function AuthModal() {
     }
   };
 
-  /**
-   * Initiates real Google OAuth flow
-   */
-  const handleGoogleClick = async () => {
-    setError(null);
-    setGoogleLoading(true);
-
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setError("Google OAuth Client ID is not configured in environment variables.");
-      setGoogleLoading(false);
-      return;
-    }
-
-    try {
-      await loadGoogleGsiScript();
-
-      if (typeof window !== "undefined" && (window as any).google?.accounts?.oauth2) {
-        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: "openid email profile",
-          prompt: "select_account",
-          error_callback: (err: any) => {
-            console.warn("Google tokenClient error, trying fallback popup:", err);
-            openGoogleOAuthPopup(clientId);
-          },
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse.error) {
-              console.warn("Google token error:", tokenResponse);
-              setGoogleLoading(false);
-              if (tokenResponse.error === "popup_closed_by_user") {
-                setError("Google sign-in popup was closed.");
-              } else {
-                openGoogleOAuthPopup(clientId);
-              }
-              return;
-            }
-
-            if (tokenResponse.access_token) {
-              const res = await loginWithGoogle({ access_token: tokenResponse.access_token });
-              setGoogleLoading(false);
-              if (!res.success) {
-                setError(res.error || "Google authentication failed.");
-              }
-            } else {
-              setGoogleLoading(false);
-            }
-          },
-        });
-
-        tokenClient.requestAccessToken({ prompt: "select_account" });
-        return;
-      }
-    } catch (err) {
-      console.warn("Error running GIS tokenClient, opening OAuth popup:", err);
-    }
-
-    // Direct OAuth Popup fallback
-    openGoogleOAuthPopup(clientId);
-  };
-
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-xl animate-fade-in">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-xl animate-fade-in">
       {/* Background glow effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent/20 rounded-full blur-[120px] pointer-events-none" />
 
@@ -343,45 +291,51 @@ export default function AuthModal() {
           </button>
         </div>
 
-        {/* Optional Native Google Identity Services Button Container */}
-        <div ref={googleBtnRef} className="w-full flex justify-center mb-2.5 overflow-hidden rounded-full empty:hidden"></div>
+        {/* Single Unified Google OAuth Button */}
+        <div className="relative w-full h-12 mb-4 rounded-2xl overflow-hidden group">
+          {/* Custom Styled Visual Presentation */}
+          <button
+            type="button"
+            onClick={handleDirectOAuthClick}
+            disabled={googleLoading}
+            className="w-full h-full flex items-center justify-center gap-3 border border-white/15 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all text-xs font-bold text-white cursor-pointer group shadow-sm disabled:opacity-60"
+          >
+            {googleLoading ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                <span className="text-white/80">Connecting to Google...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12c0 2.03.45 3.84 1.25 5.42l4.03-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
 
-        {/* Google Real OAuth Button */}
-        <button
-          type="button"
-          onClick={handleGoogleClick}
-          disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 h-12 rounded-2xl border border-white/15 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all text-xs font-bold text-white cursor-pointer group shadow-sm mb-4 disabled:opacity-60"
-        >
-          {googleLoading ? (
-            <>
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-              <span className="text-white/80">Connecting to Google...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12c0 2.03.45 3.84 1.25 5.42l4.03-3.15z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </>
-          )}
-        </button>
+          {/* Invisible Google Identity Services Button Overlay (Receives direct trusted user clicks) */}
+          <div
+            ref={googleBtnRef}
+            className="absolute inset-0 z-10 opacity-0 overflow-hidden cursor-pointer flex items-center justify-center pointer-events-auto"
+          />
+        </div>
 
         {/* Divider */}
         <div className="flex items-center gap-3 my-4">
