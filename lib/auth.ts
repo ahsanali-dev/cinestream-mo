@@ -128,3 +128,95 @@ export async function getUserFromToken(token: string): Promise<UserSession | nul
     token,
   };
 }
+
+/**
+ * Upsert Google OAuth user in MongoDB (with in-memory fallback)
+ */
+export async function upsertGoogleUser(data: {
+  email: string;
+  name?: string;
+  avatar?: string;
+  googleId?: string;
+}): Promise<UserSession> {
+  const email = data.email.toLowerCase().trim();
+  const name = (data.name && data.name.trim()) || email.split("@")[0];
+  const avatar =
+    data.avatar ||
+    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name || email)}`;
+  const googleId = data.googleId || "";
+  const now = new Date();
+
+  let userId = "";
+  let createdAt = now.toISOString();
+
+  const db = await getDb();
+  if (db) {
+    const existing = await db.collection("users").findOne({ email });
+    if (existing) {
+      userId = String(existing._id);
+      createdAt = existing.createdAt
+        ? new Date(existing.createdAt).toISOString()
+        : now.toISOString();
+      await db.collection("users").updateOne(
+        { email },
+        {
+          $set: {
+            name: name || existing.name,
+            avatar: avatar || existing.avatar,
+            lastLoginAt: now,
+            authProvider: "google",
+            ...(googleId ? { googleId } : {}),
+          },
+        }
+      );
+    } else {
+      const result = await db.collection("users").insertOne({
+        name,
+        email,
+        avatar,
+        authProvider: "google",
+        googleId,
+        role: "user",
+        createdAt: now,
+        lastLoginAt: now,
+      });
+      userId = String(result.insertedId);
+    }
+  } else {
+    // In-memory fallback
+    const existing = inMemoryStore?.users?.get(email);
+    if (existing) {
+      userId = existing.id;
+      createdAt = existing.createdAt || now.toISOString();
+      existing.name = name || existing.name;
+      existing.avatar = avatar || existing.avatar;
+      existing.lastLoginAt = now.toISOString();
+    } else {
+      userId = `usr_g_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newDoc = {
+        id: userId,
+        name,
+        email,
+        avatar,
+        authProvider: "google",
+        googleId,
+        role: "user",
+        createdAt: now.toISOString(),
+        lastLoginAt: now.toISOString(),
+      };
+      inMemoryStore?.users?.set(email, newDoc);
+    }
+  }
+
+  const token = generateToken(userId, email);
+  return {
+    id: userId,
+    name,
+    email,
+    avatar,
+    authProvider: "google",
+    createdAt,
+    token,
+  };
+}
+

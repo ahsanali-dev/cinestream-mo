@@ -1,13 +1,33 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+
+function loadGoogleGsiScript(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined") return resolve();
+    if ((window as any).google?.accounts) return resolve();
+    const existing = document.getElementById("google-gsi-client");
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => resolve());
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "google-gsi-client";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => resolve();
+    document.head.appendChild(script);
+  });
+}
 
 export default function AuthModal() {
   const {
     isAuthModalOpen,
     closeAuthModal,
     authModalMode,
-    openAuthModal,
     login,
     register,
     loginWithGoogle,
@@ -21,10 +41,7 @@ export default function AuthModal() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [isGooglePromptOpen, setIsGooglePromptOpen] = useState(false);
-  const [googlePromptEmail, setGooglePromptEmail] = useState("");
-  const [googlePromptName, setGooglePromptName] = useState("");
-  const googleBtnRef = React.useRef<HTMLDivElement>(null);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMode(authModalMode);
@@ -37,6 +54,8 @@ export default function AuthModal() {
 
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!clientId) return;
+
+    let isMounted = true;
 
     const initGsi = () => {
       if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
@@ -56,13 +75,13 @@ export default function AuthModal() {
             },
           });
 
-          if (googleBtnRef.current) {
+          if (googleBtnRef.current && isMounted) {
             googleBtnRef.current.innerHTML = "";
             (window as any).google.accounts.id.renderButton(googleBtnRef.current, {
               theme: "filled_black",
               size: "large",
               shape: "rectangular",
-              width: 360,
+              width: 340,
               text: "continue_with",
               logo_alignment: "left",
             });
@@ -73,7 +92,10 @@ export default function AuthModal() {
       }
     };
 
-    initGsi();
+    loadGoogleGsiScript().then(() => {
+      if (isMounted) initGsi();
+    });
+
     const interval = setInterval(() => {
       if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
         initGsi();
@@ -81,7 +103,10 @@ export default function AuthModal() {
       }
     }, 400);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [isAuthModalOpen, loginWithGoogle]);
 
   // Handle ESC key to close modal
@@ -141,64 +166,111 @@ export default function AuthModal() {
     }
   };
 
-  const handleGoogleClick = async () => {
-    setError(null);
-
-    // Check if Google Client ID is configured in environment
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-    if (googleClientId && typeof window !== "undefined" && (window as any).google?.accounts?.id) {
-      setGoogleLoading(true);
-      try {
-        (window as any).google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setIsGooglePromptOpen(true);
-            setGoogleLoading(false);
-          }
-        });
-      } catch {
-        setIsGooglePromptOpen(true);
-        setGoogleLoading(false);
-      }
-      return;
-    }
-
-    // Direct Google Sign-In prompt modal
-    setIsGooglePromptOpen(true);
-  };
-
-  const handleCustomGoogleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!googlePromptEmail.trim()) {
-      setError("Please enter your Google account email");
-      return;
-    }
-
-    setGoogleLoading(true);
-    setError(null);
-
+  /**
+   * Opens standard OAuth 2.0 popup window if GIS token client fails or is blocked
+   */
+  const openGoogleOAuthPopup = (clientId: string) => {
     try {
-      const cleanEmail = googlePromptEmail.toLowerCase().trim();
-      const displayName = googlePromptName.trim() || cleanEmail.split("@")[0];
-      const avatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(displayName)}`;
+      const width = 500;
+      const height = 620;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      const redirectUri = `${window.location.origin}/api/auth/google/callback`;
 
-      const res = await loginWithGoogle({
-        email: cleanEmail,
-        name: displayName,
-        avatar,
-        googleId: `google_${Date.now()}`,
-      });
+      const authUrl =
+        "https://accounts.google.com/o/oauth2/v2/auth?" +
+        new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          response_type: "code",
+          scope: "openid email profile",
+          prompt: "select_account",
+          access_type: "offline",
+        }).toString();
 
-      if (!res.success) {
-        setError(res.error || "Google authentication failed");
-      } else {
-        setIsGooglePromptOpen(false);
+      const popup = window.open(
+        authUrl,
+        "google_oauth_popup",
+        `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes`
+      );
+
+      if (!popup) {
+        setError("Popup blocked by browser. Please allow popups for MoviesZone.");
+        setGoogleLoading(false);
+        return;
       }
+
+      const checkTimer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkTimer);
+          setGoogleLoading(false);
+        }
+      }, 500);
     } catch (err: any) {
-      setError(err?.message || "Google authentication failed");
-    } finally {
+      setError(err?.message || "Failed to launch Google authorization window.");
       setGoogleLoading(false);
     }
+  };
+
+  /**
+   * Initiates real Google OAuth flow
+   */
+  const handleGoogleClick = async () => {
+    setError(null);
+    setGoogleLoading(true);
+
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setError("Google OAuth Client ID is not configured in environment variables.");
+      setGoogleLoading(false);
+      return;
+    }
+
+    try {
+      await loadGoogleGsiScript();
+
+      if (typeof window !== "undefined" && (window as any).google?.accounts?.oauth2) {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: "openid email profile",
+          prompt: "select_account",
+          error_callback: (err: any) => {
+            console.warn("Google tokenClient error, trying fallback popup:", err);
+            openGoogleOAuthPopup(clientId);
+          },
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              console.warn("Google token error:", tokenResponse);
+              setGoogleLoading(false);
+              if (tokenResponse.error === "popup_closed_by_user") {
+                setError("Google sign-in popup was closed.");
+              } else {
+                openGoogleOAuthPopup(clientId);
+              }
+              return;
+            }
+
+            if (tokenResponse.access_token) {
+              const res = await loginWithGoogle({ access_token: tokenResponse.access_token });
+              setGoogleLoading(false);
+              if (!res.success) {
+                setError(res.error || "Google authentication failed.");
+              }
+            } else {
+              setGoogleLoading(false);
+            }
+          },
+        });
+
+        tokenClient.requestAccessToken({ prompt: "select_account" });
+        return;
+      }
+    } catch (err) {
+      console.warn("Error running GIS tokenClient, opening OAuth popup:", err);
+    }
+
+    // Direct OAuth Popup fallback
+    openGoogleOAuthPopup(clientId);
   };
 
   return (
@@ -239,136 +311,55 @@ export default function AuthModal() {
           </p>
         </div>
 
-        {/* Google Quick Sign-In Prompt View */}
-        {isGooglePromptOpen ? (
-          <div className="animate-fade-in">
-            <div className="p-4 rounded-2xl border border-white/10 bg-white/5 mb-5 text-center">
-              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mx-auto mb-3 shadow-md">
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.97 0 12c0 2.03.45 3.84 1.25 5.42l4.03-3.15z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-sm font-bold text-white">Sign In with Google</h3>
-              <p className="text-[11px] text-white/50 mt-1">
-                Enter your Google account to connect instantly
-              </p>
-            </div>
+        {/* Mode Switch Tabs */}
+        <div className="flex rounded-2xl border border-white/10 bg-white/5 p-1 mb-5">
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError(null);
+            }}
+            className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+              mode === "login"
+                ? "bg-accent text-white shadow-md shadow-accent/20"
+                : "text-white/50 hover:text-white"
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signup");
+              setError(null);
+            }}
+            className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
+              mode === "signup"
+                ? "bg-accent text-white shadow-md shadow-accent/20"
+                : "text-white/50 hover:text-white"
+            }`}
+          >
+            Create Account
+          </button>
+        </div>
 
-            {error && (
-              <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400">
-                {error}
-              </div>
-            )}
+        {/* Optional Native Google Identity Services Button Container */}
+        <div ref={googleBtnRef} className="w-full flex justify-center mb-2.5 overflow-hidden rounded-full empty:hidden"></div>
 
-            <form onSubmit={handleCustomGoogleSubmit} className="space-y-3.5">
-              <div>
-                <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
-                  Google Account Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Alex Hunter"
-                  value={googlePromptName}
-                  onChange={(e) => setGooglePromptName(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
-                  Google Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="yourname@gmail.com"
-                  value={googlePromptEmail}
-                  onChange={(e) => setGooglePromptEmail(e.target.value)}
-                  className="w-full h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsGooglePromptOpen(false)}
-                  className="flex-1 h-11 rounded-xl border border-white/10 bg-white/5 text-xs font-bold text-white/70 hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={googleLoading}
-                  className="flex-1 h-11 rounded-xl bg-accent hover:bg-[#ff7b1a] text-white text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,106,0,0.3)] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  {googleLoading ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  ) : (
-                    "Authorize"
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <>
-            {/* Mode Switch Tabs */}
-            <div className="flex rounded-2xl border border-white/10 bg-white/5 p-1 mb-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("login");
-                  setError(null);
-                }}
-                className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
-                  mode === "login"
-                    ? "bg-accent text-white shadow-md shadow-accent/20"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode("signup");
-                  setError(null);
-                }}
-                className={`flex-1 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer ${
-                  mode === "signup"
-                    ? "bg-accent text-white shadow-md shadow-accent/20"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                Create Account
-              </button>
-            </div>
-
-            {/* Native Google Identity Services Button Container */}
-            <div ref={googleBtnRef} className="w-full flex justify-center mb-2.5 overflow-hidden rounded-full"></div>
-
-            {/* Google OAuth Button */}
-            <button
-              type="button"
-              onClick={handleGoogleClick}
-              disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 h-12 rounded-2xl border border-white/15 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all text-xs font-bold text-white cursor-pointer group shadow-sm mb-4"
-            >
+        {/* Google Real OAuth Button */}
+        <button
+          type="button"
+          onClick={handleGoogleClick}
+          disabled={googleLoading}
+          className="w-full flex items-center justify-center gap-3 h-12 rounded-2xl border border-white/15 bg-white/5 hover:bg-white/10 active:scale-[0.98] transition-all text-xs font-bold text-white cursor-pointer group shadow-sm mb-4 disabled:opacity-60"
+        >
+          {googleLoading ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              <span className="text-white/80">Connecting to Google...</span>
+            </>
+          ) : (
+            <>
               <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -388,115 +379,115 @@ export default function AuthModal() {
                 />
               </svg>
               <span>Continue with Google</span>
-            </button>
+            </>
+          )}
+        </button>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-px bg-white/10"></div>
-              <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
-                or with email
-              </span>
-              <div className="flex-1 h-px bg-white/10"></div>
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-4">
+          <div className="flex-1 h-px bg-white/10"></div>
+          <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+            or with email
+          </span>
+          <div className="flex-1 h-px bg-white/10"></div>
+        </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400 flex items-center gap-2">
+            <i className="ph-bold ph-warning-circle text-base shrink-0"></i>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Email / Password Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {mode === "signup" && (
+            <div>
+              <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
+                Full Name
+              </label>
+              <div className="relative flex items-center">
+                <i className="ph-bold ph-user absolute left-3.5 text-white/40 text-sm"></i>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 pl-10 pr-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
+                />
+              </div>
             </div>
+          )}
 
-            {/* Error Banner */}
-            {error && (
-              <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-400 flex items-center gap-2">
-                <i className="ph-bold ph-warning-circle text-base shrink-0"></i>
-                <span>{error}</span>
-              </div>
-            )}
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
+              Email Address
+            </label>
+            <div className="relative flex items-center">
+              <i className="ph-bold ph-envelope absolute left-3.5 text-white/40 text-sm"></i>
+              <input
+                type="email"
+                required
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-11 pl-10 pr-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
+              />
+            </div>
+          </div>
 
-            {/* Email / Password Form */}
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              {mode === "signup" && (
-                <div>
-                  <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
-                    Full Name
-                  </label>
-                  <div className="relative flex items-center">
-                    <i className="ph-bold ph-user absolute left-3.5 text-white/40 text-sm"></i>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. John Doe"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full h-11 pl-10 pr-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
-                  Email Address
-                </label>
-                <div className="relative flex items-center">
-                  <i className="ph-bold ph-envelope absolute left-3.5 text-white/40 text-sm"></i>
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-11 pl-10 pr-4 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
-                  Password
-                </label>
-                <div className="relative flex items-center">
-                  <i className="ph-bold ph-lock-key absolute left-3.5 text-white/40 text-sm"></i>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-11 pl-10 pr-10 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-white/40 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <i className={`ph-bold ${showPassword ? "ph-eye-slash" : "ph-eye"} text-base`}></i>
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-12 rounded-2xl bg-accent hover:bg-[#ff7b1a] text-white text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,106,0,0.3)] hover:shadow-[0_0_25px_rgba(255,106,0,0.5)] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
-              >
-                {loading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <span>{mode === "login" ? "Sign In to Account" : "Create My Account"}</span>
-                )}
-              </button>
-            </form>
-
-            {/* Guest Friendly Footer */}
-            <div className="mt-6 pt-4 border-t border-white/10 text-center">
-              <p className="text-[11px] text-white/40">
-                Don't want to sign in right now?
-              </p>
+          <div>
+            <label className="block text-[11px] font-bold text-white/60 uppercase tracking-wider mb-1.5">
+              Password
+            </label>
+            <div className="relative flex items-center">
+              <i className="ph-bold ph-lock-key absolute left-3.5 text-white/40 text-sm"></i>
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder={mode === "signup" ? "At least 6 characters" : "••••••••"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-11 pl-10 pr-10 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:border-accent outline-none transition-colors"
+              />
               <button
                 type="button"
-                onClick={closeAuthModal}
-                className="mt-1 text-xs font-bold text-accent hover:underline cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-white/40 hover:text-white transition-colors cursor-pointer"
               >
-                Continue Watching as Guest →
+                <i className={`ph-bold ${showPassword ? "ph-eye-slash" : "ph-eye"} text-base`}></i>
               </button>
             </div>
-          </>
-        )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-12 rounded-2xl bg-accent hover:bg-[#ff7b1a] text-white text-xs font-black uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(255,106,0,0.3)] hover:shadow-[0_0_25px_rgba(255,106,0,0.5)] active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
+          >
+            {loading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <span>{mode === "login" ? "Sign In to Account" : "Create My Account"}</span>
+            )}
+          </button>
+        </form>
+
+        {/* Guest Friendly Footer */}
+        <div className="mt-6 pt-4 border-t border-white/10 text-center">
+          <p className="text-[11px] text-white/40">
+            Don't want to sign in right now?
+          </p>
+          <button
+            type="button"
+            onClick={closeAuthModal}
+            className="mt-1 text-xs font-bold text-accent hover:underline cursor-pointer"
+          >
+            Continue Watching as Guest →
+          </button>
+        </div>
       </div>
     </div>
   );

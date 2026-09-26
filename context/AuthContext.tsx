@@ -10,9 +10,18 @@ interface AuthContextType {
   authModalMode: "login" | "signup";
   openAuthModal: (mode?: "login" | "signup") => void;
   closeAuthModal: () => void;
+  setSessionUser: (user: UserSession) => void;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: (payload: { credential?: string; email?: string; name?: string; avatar?: string; googleId?: string }) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (payload: {
+    credential?: string;
+    access_token?: string;
+    code?: string;
+    email?: string;
+    name?: string;
+    avatar?: string;
+    googleId?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -24,6 +33,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"login" | "signup">("login");
+
+  const openAuthModal = useCallback((mode: "login" | "signup" = "login") => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  }, []);
+
+  const closeAuthModal = useCallback(() => {
+    setIsAuthModalOpen(false);
+  }, []);
+
+  const setSessionUser = useCallback(
+    (userData: UserSession) => {
+      setUser(userData);
+      setToken(userData.token || null);
+      if (userData.token) {
+        try {
+          localStorage.setItem("cinestream_auth_token", userData.token);
+        } catch {}
+      }
+      try {
+        localStorage.setItem("cinestream_auth_user", JSON.stringify(userData));
+      } catch {}
+      closeAuthModal();
+    },
+    [closeAuthModal]
+  );
 
   // Restore session from localStorage on initial load
   useEffect(() => {
@@ -70,14 +105,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const openAuthModal = useCallback((mode: "login" | "signup" = "login") => {
-    setAuthModalMode(mode);
-    setIsAuthModalOpen(true);
-  }, []);
+  // Listen for OAuth message events from popup window (e.g. Google OAuth redirect callback)
+  useEffect(() => {
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (typeof window !== "undefined" && event.origin !== window.location.origin) {
+        return;
+      }
+      if (event.data?.type === "GOOGLE_AUTH_SUCCESS" && event.data?.user) {
+        setSessionUser(event.data.user);
+      }
+    };
 
-  const closeAuthModal = useCallback(() => {
-    setIsAuthModalOpen(false);
-  }, []);
+    window.addEventListener("message", handleAuthMessage);
+    return () => window.removeEventListener("message", handleAuthMessage);
+  }, [setSessionUser]);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -92,13 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: data.error || "Failed to log in" };
       }
 
-      setUser(data.user);
-      setToken(data.user.token || null);
-      if (data.user.token) {
-        localStorage.setItem("cinestream_auth_token", data.user.token);
-      }
-      localStorage.setItem("cinestream_auth_user", JSON.stringify(data.user));
-      closeAuthModal();
+      setSessionUser(data.user);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error. Please try again." };
@@ -118,20 +153,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: data.error || "Failed to create account" };
       }
 
-      setUser(data.user);
-      setToken(data.user.token || null);
-      if (data.user.token) {
-        localStorage.setItem("cinestream_auth_token", data.user.token);
-      }
-      localStorage.setItem("cinestream_auth_user", JSON.stringify(data.user));
-      closeAuthModal();
+      setSessionUser(data.user);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error. Please try again." };
     }
   };
 
-  const loginWithGoogle = async (payload: { credential?: string; email?: string; name?: string; avatar?: string; googleId?: string }): Promise<{ success: boolean; error?: string }> => {
+  const loginWithGoogle = async (payload: {
+    credential?: string;
+    access_token?: string;
+    code?: string;
+    email?: string;
+    name?: string;
+    avatar?: string;
+    googleId?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch("/api/auth/google", {
         method: "POST",
@@ -144,13 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: data.error || "Google authentication failed" };
       }
 
-      setUser(data.user);
-      setToken(data.user.token || null);
-      if (data.user.token) {
-        localStorage.setItem("cinestream_auth_token", data.user.token);
-      }
-      localStorage.setItem("cinestream_auth_user", JSON.stringify(data.user));
-      closeAuthModal();
+      setSessionUser(data.user);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || "Network error connecting to Google" };
@@ -176,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authModalMode,
         openAuthModal,
         closeAuthModal,
+        setSessionUser,
         login,
         register,
         loginWithGoogle,
