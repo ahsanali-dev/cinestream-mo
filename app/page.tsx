@@ -21,20 +21,16 @@ import SkeletonCard from "@/components/SkeletonCard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MoviesZone | Watch Free Movies & TV Series Online in 1080p HD - MovieBox Alternative",
-  description: "Stream trending movies, Bollywood blockbusters, Hindi Dubbed cinema, and popular Netflix & Prime Video TV shows in full 1080p HD on MoviesZone. The best ad-free alternative to MovieBox, NetMirror, and KatmovieHD.",
+  title: "MoviesZone | Watch Free Movies & TV Series Online in 1080p HD",
+  description: "Stream trending movies, Bollywood blockbusters, Hindi Dubbed cinema, and popular TV shows in full 1080p HD on MoviesZone with fast streaming and zero popups.",
   keywords: [
-    "MovieBox alternative",
-    "NetMirror alternative",
-    "KatmovieHD hindi dubbed",
-    "TheMovieBox free",
+    "MoviesZone stream",
+    "Watch movies free online",
+    "Hindi dubbed movies 1080p",
     "Netflix series free",
     "Prime Video free stream",
-    "Vegamovies hindi dubbed",
-    "Bollyflix movies",
     "MoviesZone app apk download",
-    "Hindi dubbed movies 1080p",
-    "Watch movies free online"
+    "Stream TV shows free HD"
   ],
   alternates: {
     canonical: "/",
@@ -180,86 +176,6 @@ export default async function Home() {
       {/* Genre Rows */}
       <MovieRow title="Action Blockbusters" data={actionMovies} link="/explore/genre/Action" />
       <MovieRow title="Horror Nights" data={horrorMovies} link="/explore/genre/Horror" />
-
-      {/* SEO & Competitor Comparison Section */}
-      <section className="px-8 md:px-16 pt-28 pb-12">
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent p-8 md:p-12 shadow-2xl backdrop-blur-xl">
-          <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
-            <div>
-              <span className="px-3 py-1 rounded-full bg-accent/20 border border-accent/40 text-accent text-xs font-black uppercase tracking-wider inline-block mb-3">
-                #1 Free Streaming Platform
-              </span>
-              <h2 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-white">
-                MoviesZone — The Ultimate MovieBox &amp; NetMirror Alternative
-              </h2>
-            </div>
-            <Link
-              href="/explore"
-              className="self-start md:self-auto px-6 py-3 rounded-2xl bg-accent text-white text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg shadow-accent/25"
-            >
-              Browse Library
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-accent/20 text-accent flex items-center justify-center text-xl font-bold">
-                <i className="ph-fill ph-translate"></i>
-              </div>
-              <h3 className="text-lg font-black uppercase text-white tracking-wide">
-                Hindi Dubbed &amp; Dual Audio
-              </h3>
-              <p className="text-xs text-white/60 leading-relaxed">
-                Better than KatmovieHD and Vegamovies. Enjoy Bollywood, South Indian (Tamil, Telugu), and Hollywood blockbusters dubbed in clear Hindi with multi-language subtitle tracks.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-[#FFAA00]/20 text-[#FFAA00] flex items-center justify-center text-xl font-bold">
-                <i className="ph-fill ph-android-logo"></i>
-              </div>
-              <h3 className="text-lg font-black uppercase text-white tracking-wide">
-                100% Ad-Free Android App
-              </h3>
-              <p className="text-xs text-white/60 leading-relaxed">
-                Tired of popups on NetMirror or MovieBox? Download the official MoviesZone APK for guaranteed zero-ad playback, fast server CDN routes, and instant background loading.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl font-bold">
-                <i className="ph-fill ph-television"></i>
-              </div>
-              <h3 className="text-lg font-black uppercase text-white tracking-wide">
-                Netflix &amp; Prime Shows Free
-              </h3>
-              <p className="text-xs text-white/60 leading-relaxed">
-                Stream trending originals from Netflix, Amazon Prime Video, Disney+, and HBO Max in crisp 1080p Full HD without any monthly subscription fees.
-              </p>
-            </div>
-          </div>
-
-          {/* Keyword SEO Cloud */}
-          <div className="pt-6 border-t border-white/10 flex flex-wrap gap-2 text-[11px] text-white/40 font-medium">
-            <span className="font-bold text-white/60">Trending Searches:</span>
-            <span className="hover:text-accent transition-colors cursor-default">MovieBox PRO Free</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">NetMirror Movies Stream</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">KatmovieHD Dual Audio 1080p</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">Watch Bollywood Movies Free</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">Download MoviesZone APK</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">South Indian Hindi Dubbed HD</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">Netflix Web Series Online</span>
-            <span>•</span>
-            <span className="hover:text-accent transition-colors cursor-default">Bollyflix &amp; Vegamovies Alternative</span>
-          </div>
-        </div>
-      </section>
     </main>
   );
 }

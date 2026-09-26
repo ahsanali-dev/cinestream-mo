@@ -11,10 +11,8 @@ export const metadata: Metadata = {
     "Watch Netflix series free",
     "Prime video shows free stream",
     "Hindi dubbed web series",
-    "NetMirror TV shows",
-    "TheMovieBox series",
-    "MovieBox PRO TV series",
-    "KatmovieHD web series",
+    "HD TV shows",
+    "Popular web series",
     "Binge watch TV shows 1080p",
     "Korean drama in Hindi",
     "Free web series online"
@@ -40,7 +38,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Watch TV Series & Netflix Shows Free | MoviesZone",
-    description: "Stream popular TV series and web shows in HD for free on MoviesZone. MovieBox and NetMirror alternative.",
+    description: "Stream popular TV series and web shows in HD for free on MoviesZone with fast servers.",
     images: ["/icon-512x512.png"],
   },
 };

@@ -1,0 +1,271 @@
+import crypto from "crypto";
+import { getDb, inMemoryStore } from "./mongodb";
+
+export interface UserSession {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  authProvider?: "credentials" | "google";
+  token?: string;
+  createdAt?: string;
+}
+
+const AUTH_SECRET = process.env.AUTH_SECRET || "cinestream_secure_jwt_secret_key_2026_xyz";
+
+/**
+ * Hash password securely with PBKDF2 (Native Node.js Crypto)
+ */
+export function hashPassword(password: string): { hash: string; salt: string } {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
+  return { hash, salt };
+}
+
+/**
+ * Verify password against stored hash and salt
+ */
+export function verifyPassword(password: string, hash: string, salt: string): boolean {
+  try {
+    const verifyHash = crypto.pbkdf2Sync(password, salt, 10000, 64, "sha512").toString("hex");
+    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(verifyHash, "hex"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Generate a signed session token
+ */
+export function generateToken(userId: string, email: string): string {
+  const payload = Buffer.from(
+    JSON.stringify({
+      userId,
+      email: email.toLowerCase().trim(),
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 30 * 86400 * 1000, // 30 days
+    })
+  ).toString("base64url");
+
+  const signature = crypto
+    .createHmac("sha256", AUTH_SECRET)
+    .update(payload)
+    .digest("base64url");
+
+  return `${payload}.${signature}`;
+}
+
+/**
+ * Verify session token
+ */
+export function verifyToken(token: string): { userId: string; email: string } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto
+      .createHmac("sha256", AUTH_SECRET)
+      .update(payloadB64)
+      .digest("base64url");
+
+    if (signature !== expectedSig) return null;
+
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+    if (Date.now() > payload.expiresAt) return null;
+
+    return { userId: payload.userId, email: payload.email };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Generate a signed Admin session token
+ */
+export function generateAdminToken(): string {
+  const payload = Buffer.from(
+    JSON.stringify({
+      role: "admin",
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 7 * 86400 * 1000, // 7 days
+    })
+  ).toString("base64url");
+
+  const signature = crypto
+    .createHmac("sha256", AUTH_SECRET)
+    .update(payload)
+    .digest("base64url");
+
+  return `adm_${payload}.${signature}`;
+}
+
+/**
+ * Verify Admin session token
+ */
+export function verifyAdminToken(token: string): boolean {
+  try {
+    if (!token || typeof token !== "string" || !token.startsWith("adm_")) return false;
+    const raw = token.slice(4);
+    const parts = raw.split(".");
+    if (parts.length !== 2) return false;
+
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto
+      .createHmac("sha256", AUTH_SECRET)
+      .update(payloadB64)
+      .digest("base64url");
+
+    if (signature !== expectedSig) return false;
+
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+    if (payload.role !== "admin") return false;
+    if (Date.now() > payload.expiresAt) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
+/**
+ * Get user by verified token from MongoDB or fallback in-memory store
+ */
+export async function getUserFromToken(token: string): Promise<UserSession | null> {
+  const verified = verifyToken(token);
+  if (!verified) return null;
+
+  try {
+    const db = await getDb();
+    if (db) {
+      const userDoc = await db.collection("users").findOne({ email: verified.email });
+      if (userDoc) {
+        return {
+          id: String(userDoc._id),
+          name: userDoc.name || verified.email.split("@")[0],
+          email: userDoc.email,
+          avatar: userDoc.avatar || "",
+          authProvider: userDoc.authProvider || "credentials",
+          createdAt: userDoc.createdAt ? new Date(userDoc.createdAt).toISOString() : new Date().toISOString(),
+          token,
+        };
+      }
+    }
+  } catch (err) {
+    console.error("getUserFromToken Mongo error:", err);
+  }
+
+  // Fallback to in-memory store
+  if (inMemoryStore?.users?.has(verified.email)) {
+    const u = inMemoryStore.users.get(verified.email);
+    return {
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      avatar: u.avatar || "",
+      authProvider: u.authProvider || "credentials",
+      createdAt: u.createdAt || new Date().toISOString(),
+      token,
+    };
+  }
+
+  return {
+    id: verified.userId,
+    name: verified.email.split("@")[0],
+    email: verified.email,
+    token,
+  };
+}
+
+/**
+ * Upsert Google OAuth user in MongoDB (with in-memory fallback)
+ */
+export async function upsertGoogleUser(data: {
+  email: string;
+  name?: string;
+  avatar?: string;
+  googleId?: string;
+}): Promise<UserSession> {
+  const email = data.email.toLowerCase().trim();
+  const name = (data.name && data.name.trim()) || email.split("@")[0];
+  const avatar =
+    data.avatar ||
+    `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(name || email)}`;
+  const googleId = data.googleId || "";
+  const now = new Date();
+
+  let userId = "";
+  let createdAt = now.toISOString();
+
+  const db = await getDb();
+  if (db) {
+    const existing = await db.collection("users").findOne({ email });
+    if (existing) {
+      userId = String(existing._id);
+      createdAt = existing.createdAt
+        ? new Date(existing.createdAt).toISOString()
+        : now.toISOString();
+      await db.collection("users").updateOne(
+        { email },
+        {
+          $set: {
+            name: name || existing.name,
+            avatar: avatar || existing.avatar,
+            lastLoginAt: now,
+            authProvider: "google",
+            ...(googleId ? { googleId } : {}),
+          },
+        }
+      );
+    } else {
+      const result = await db.collection("users").insertOne({
+        name,
+        email,
+        avatar,
+        authProvider: "google",
+        googleId,
+        role: "user",
+        createdAt: now,
+        lastLoginAt: now,
+      });
+      userId = String(result.insertedId);
+    }
+  } else {
+    // In-memory fallback
+    const existing = inMemoryStore?.users?.get(email);
+    if (existing) {
+      userId = existing.id;
+      createdAt = existing.createdAt || now.toISOString();
+      existing.name = name || existing.name;
+      existing.avatar = avatar || existing.avatar;
+      existing.lastLoginAt = now.toISOString();
+    } else {
+      userId = `usr_g_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newDoc = {
+        id: userId,
+        name,
+        email,
+        avatar,
+        authProvider: "google",
+        googleId,
+        role: "user",
+        createdAt: now.toISOString(),
+        lastLoginAt: now.toISOString(),
+      };
+      inMemoryStore?.users?.set(email, newDoc);
+    }
+  }
+
+  const token = generateToken(userId, email);
+  return {
+    id: userId,
+    name,
+    email,
+    avatar,
+    authProvider: "google",
+    createdAt,
+    token,
+  };
+}
+
