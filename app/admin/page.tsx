@@ -26,6 +26,9 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  Wrench,
+  Clock,
+  Timer,
 } from "lucide-react";
 
 interface AppConfig {
@@ -34,6 +37,12 @@ interface AppConfig {
   auto_fallback_enabled: boolean;
   shorts_enabled: boolean;
   family_filter_enabled: boolean;
+  maintenance?: {
+    enabled: boolean;
+    title?: string;
+    message?: string;
+    back_online_time?: string;
+  };
   netmirror: {
     enabled: boolean;
     active_domain: string;
@@ -824,8 +833,8 @@ export default function AdminDashboard() {
                           </div>
                           <div className="text-[11px] text-zinc-400 mt-0.5">
                             {config.family_filter_enabled !== false
-                              ? "Blocks explicit keywords & adult queries across search."
-                              : "Filters bypassed: All queries allowed without restrictions."}
+                              ? "LOCKED / ENFORCED: Mobile users CANNOT disable 18+ filter in app settings."
+                              : "USER OVERRIDE ALLOWED: Mobile users can freely toggle filter ON/OFF."}
                           </div>
                         </div>
                       </div>
@@ -847,6 +856,173 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* App Under Maintenance Mode Card */}
+              <div className={`p-5 rounded-2xl border transition-all ${
+                config.maintenance?.enabled
+                  ? "bg-rose-950/30 border-rose-500/50 shadow-lg shadow-rose-950/40"
+                  : "bg-black/40 border-white/10"
+              }`}>
+                <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl border ${
+                      config.maintenance?.enabled
+                        ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
+                        : "bg-zinc-800/60 border-zinc-700/50 text-zinc-400"
+                    }`}>
+                      <Wrench className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white flex items-center gap-2">
+                        Mobile App Under Maintenance Mode
+                        {config.maintenance?.enabled && (
+                          <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-md bg-rose-500 text-white animate-pulse">
+                            Active Lockdown
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-zinc-400 mt-0.5">
+                        Locks all user apps with a full-screen maintenance overlay and live countdown timer.
+                      </div>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer ml-3">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(config.maintenance?.enabled)}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          maintenance: {
+                            ...(config.maintenance || {
+                              title: "Site & App Under Maintenance",
+                              message: "Our servers are currently undergoing scheduled maintenance and upgrades. MoviesZone will be back online shortly!",
+                              back_online_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+                            }),
+                            enabled: e.target.checked,
+                          },
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500" />
+                  </label>
+                </div>
+
+                {config.maintenance?.enabled && (
+                  <div className="mt-4 pt-2 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Maintenance Title */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                          Overlay Heading
+                        </label>
+                        <input
+                          type="text"
+                          value={config.maintenance?.title || ""}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              maintenance: {
+                                ...(config.maintenance as any),
+                                title: e.target.value,
+                              },
+                            })
+                          }
+                          placeholder="e.g. Site & App Under Maintenance"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/80 border border-white/10 text-xs text-white focus:outline-none focus:border-rose-500"
+                        />
+                      </div>
+
+                      {/* Expected Back Online Time */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-rose-400" />
+                            Expected Back Online (Countdown Target)
+                          </label>
+                          <span className="text-[10px] text-zinc-500">
+                            {config.maintenance?.back_online_time ? new Date(config.maintenance.back_online_time).toLocaleString() : ""}
+                          </span>
+                        </div>
+                        <input
+                          type="datetime-local"
+                          value={
+                            config.maintenance?.back_online_time
+                              ? new Date(config.maintenance.back_online_time).toISOString().slice(0, 16)
+                              : ""
+                          }
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setConfig({
+                                ...config,
+                                maintenance: {
+                                  ...(config.maintenance as any),
+                                  back_online_time: new Date(e.target.value).toISOString(),
+                                },
+                              });
+                            }
+                          }}
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/80 border border-white/10 text-xs text-white focus:outline-none focus:border-rose-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quick Preset Buttons */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-[11px] text-zinc-400 font-medium">Quick Presets:</span>
+                      {[
+                        { label: "+6 Hours", hours: 6 },
+                        { label: "+12 Hours", hours: 12 },
+                        { label: "+1 Day", hours: 24 },
+                        { label: "+2 Days", hours: 48 },
+                        { label: "+3 Days", hours: 72 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            const newDate = new Date(Date.now() + preset.hours * 60 * 60 * 1000).toISOString();
+                            setConfig({
+                              ...config,
+                              maintenance: {
+                                ...(config.maintenance as any),
+                                back_online_time: newDate,
+                              },
+                            });
+                          }}
+                          className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-white/5 transition"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Notice Message */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                        Notice / Explanation Message
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={config.maintenance?.message || ""}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            maintenance: {
+                              ...(config.maintenance as any),
+                              message: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder="Explain why servers are undergoing maintenance..."
+                        className="w-full px-3.5 py-2 rounded-xl bg-zinc-900/80 border border-white/10 text-xs text-white focus:outline-none focus:border-rose-500 resize-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Advanced Parameters Configuration Inputs */}

@@ -38,6 +38,12 @@ if (!global._inMemoryStore) {
       auto_fallback_enabled: true,
       shorts_enabled: true,
       family_filter_enabled: true,
+      maintenance: {
+        enabled: false,
+        title: "Site & App Under Maintenance",
+        message: "Our servers are currently undergoing scheduled maintenance and upgrades. MoviesZone will be back online shortly!",
+        back_online_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+      },
       netmirror: {
         enabled: true,
         active_domain: "https://net77.cc",

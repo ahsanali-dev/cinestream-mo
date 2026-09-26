@@ -41,6 +41,12 @@ export async function GET() {
           },
           shorts_enabled: configDoc.shorts_enabled !== false,
           family_filter_enabled: configDoc.family_filter_enabled !== false,
+          maintenance: {
+            enabled: Boolean(configDoc.maintenance?.enabled),
+            title: configDoc.maintenance?.title || inMemoryStore.config.maintenance?.title || "Site & App Under Maintenance",
+            message: configDoc.maintenance?.message || inMemoryStore.config.maintenance?.message || "Our servers are currently undergoing scheduled maintenance and upgrades. MoviesZone will be back online shortly!",
+            back_online_time: configDoc.maintenance?.back_online_time || inMemoryStore.config.maintenance?.back_online_time || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+          },
         };
         return NextResponse.json(
           {
