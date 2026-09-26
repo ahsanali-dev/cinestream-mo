@@ -14,6 +14,7 @@ const Sidebar = () => {
         { icon: 'ph-bold ph-monitor', label: 'TV Shows', path: '/tv-shows' },
         { icon: 'ph-bold ph-popcorn', label: 'Movies', path: '/movies' },
         { icon: 'ph-bold ph-heart', label: 'Watchlist', path: '/watchlist' },
+        { icon: 'ph-bold ph-user-circle', label: 'Profile', path: '/profile' },
     ];
 
     return (

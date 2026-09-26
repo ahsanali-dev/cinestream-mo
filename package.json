@@ -1,5 +1,5 @@
 {
-  "name": "mo",
+  "name": "movieszone-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "hls.js": "^1.7.3",
+    "lucide-react": "^1.48.0",
+    "mongodb": "^7.6.0",
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",

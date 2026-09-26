@@ -21,20 +21,16 @@ import SkeletonCard from "@/components/SkeletonCard";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MoviesZone | Watch Free Movies & TV Series Online in 1080p HD - MovieBox Alternative",
-  description: "Stream trending movies, Bollywood blockbusters, Hindi Dubbed cinema, and popular Netflix & Prime Video TV shows in full 1080p HD on MoviesZone. The best ad-free alternative to MovieBox, NetMirror, and KatmovieHD.",
+  title: "MoviesZone | Watch Free Movies & TV Series Online in 1080p HD",
+  description: "Stream trending movies, Bollywood blockbusters, Hindi Dubbed cinema, and popular TV shows in full 1080p HD on MoviesZone with fast streaming and zero popups.",
   keywords: [
-    "MovieBox alternative",
-    "NetMirror alternative",
-    "KatmovieHD hindi dubbed",
-    "TheMovieBox free",
+    "MoviesZone stream",
+    "Watch movies free online",
+    "Hindi dubbed movies 1080p",
     "Netflix series free",
     "Prime Video free stream",
-    "Vegamovies hindi dubbed",
-    "Bollyflix movies",
     "MoviesZone app apk download",
-    "Hindi dubbed movies 1080p",
-    "Watch movies free online"
+    "Stream TV shows free HD"
   ],
   alternates: {
     canonical: "/",

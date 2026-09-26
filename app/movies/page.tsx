@@ -5,17 +5,12 @@ import { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: "Watch Movies Online Free in HD | Bollywood, Hollywood, Hindi Dubbed - MoviesZone",
-  description: "Explore the latest blockbuster movies in 1080p Full HD on MoviesZone. Watch Bollywood, South Indian Hindi Dubbed, and Hollywood cinema with zero ads. The ultimate KatmovieHD and MovieBox alternative.",
+  description: "Explore the latest blockbuster movies in 1080p Full HD on MoviesZone. Watch Bollywood, South Indian Hindi Dubbed, and Hollywood cinema with fast cloud streaming and zero ads.",
   keywords: [
     "Watch movies online free",
     "Hindi dubbed movies HD",
     "Dual audio movies 1080p",
-    "KatmovieHD alternative",
-    "MovieBox movies",
-    "TheMovieBox stream",
-    "NetMirror movies online",
-    "Vegamovies hindi",
-    "Bollyflix full movie",
+    "MoviesZone cinema",
     "Bollywood blockbusters free",
     "Hollywood movies in Hindi"
   ],
@@ -40,7 +35,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Watch Feature Films & Blockbusters | MoviesZone",
-    description: "Stream trending movies in full HD for free on MoviesZone. MovieBox and KatmovieHD alternative.",
+    description: "Stream trending movies in full HD for free on MoviesZone with fast cloud servers.",
     images: ["/icon-512x512.png"],
   },
 };

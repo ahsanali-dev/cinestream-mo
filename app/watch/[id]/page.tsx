@@ -27,8 +27,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const rawYear = releaseDate ? releaseDate.split("-")[0] : "2024";
     const year = rawYear ? ` (${rawYear})` : "";
     const description = movie.overview 
-      ? `Watch ${title}${year} in 1080p Full HD with Hindi Dubbed audio and multi-language subtitles on MoviesZone. Better than MovieBox, NetMirror, and KatmovieHD. ${movie.overview.slice(0, 120)}...`
-      : `Stream ${title}${year} online in full HD with Hindi Dubbed & English audio for free on MoviesZone. The top MovieBox and NetMirror alternative.`;
+      ? `Watch ${title}${year} in 1080p Full HD with Hindi Dubbed audio and multi-language subtitles on MoviesZone. Fast servers and zero popups. ${movie.overview.slice(0, 120)}...`
+      : `Stream ${title}${year} online in full HD with Hindi Dubbed & English audio for free on MoviesZone. Top streaming experience.`;
 
     const primaryImage = movie.backdrop_path 
       ? `https://image.tmdb.org/t/p/w1280${movie.backdrop_path}` 
@@ -50,12 +50,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         `${title} full movie HD free`,
         `${title} dual audio`,
         `${title} English subtitles`,
-        `${title} MovieBox alternative`,
-        `${title} TheMovieBox stream`,
-        `${title} NetMirror`,
-        `${title} KatmovieHD`,
-        `${title} Vegamovies`,
-        `${title} Bollyflix`,
+        `${title} HD stream`,
+        `${title} online streaming`,
+        `${title} MoviesZone`,
         "MoviesZone free streaming",
         "Watch movies online free",
         "Download MoviesZone APK"
@@ -209,7 +206,7 @@ export default async function WatchPage({ params, searchParams }: PageProps) {
         "name": `Where can I watch ${title} online for free?`,
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": `You can stream ${title} online in high definition on MoviesZone with fast servers and zero popups. MoviesZone is the top alternative to MovieBox, NetMirror, and KatmovieHD.`,
+          "text": `You can stream ${title} online in high definition on MoviesZone with fast ultra-cloud servers and zero popups.`,
         },
       },
       {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { searchMovies } from "@/lib/tmdb";
 import { useInstallModal } from "@/context/InstallModalContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface TMDBItem {
   id: number;
@@ -28,9 +29,12 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
 
   const { isInstalled, openInstallModal } = useInstallModal();
+  const { user, openAuthModal, logout } = useAuth();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -92,11 +96,14 @@ export default function Header() {
     setActiveIndex(-1);
   }, [suggestions, query]);
 
-  // Click outside to close dropdown
+  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -339,10 +346,82 @@ export default function Header() {
             {/* Tooltip / Suggestion on Hover */}
             <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-white/10 bg-[#0f0f12]/95 backdrop-blur-xl p-3 text-[10px] font-bold text-white/70 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 pointer-events-none z-[250] text-center leading-relaxed">
               Install <span className="text-accent font-black">MoviesZone</span> as a mobile or desktop app for a premium, full-screen experience.
-              {/* Little triangle arrow at top */}
               <div className="absolute -top-1.5 right-10 h-3 w-3 rotate-45 border-t border-l border-white/10 bg-[#0f0f12]"></div>
             </div>
           </div>
+        )}
+
+        {/* User Profile Dropdown or Sign In Button */}
+        {user ? (
+          <div className="relative shrink-0" ref={userMenuRef}>
+            <button
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className="flex items-center gap-2 p-1 sm:pl-2 sm:pr-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all cursor-pointer group"
+              aria-label="User Account"
+            >
+              <img
+                src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.name)}`}
+                alt={user.name}
+                className="w-7 h-7 rounded-full object-cover border border-accent/40 bg-black/40 group-hover:border-accent"
+              />
+              <span className="hidden sm:inline text-xs font-bold text-white max-w-[90px] truncate">
+                {user.name.split(" ")[0]}
+              </span>
+              <i className="ph-bold ph-caret-down text-white/50 text-[10px]"></i>
+            </button>
+
+            {/* Dropdown Menu */}
+            {isUserMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-[#0e1118]/95 backdrop-blur-2xl p-2 shadow-2xl z-[250] animate-fade-in">
+                <div className="px-3 py-2.5 border-b border-white/10">
+                  <p className="text-xs font-black text-white truncate">{user.name}</p>
+                  <p className="text-[10px] text-white/50 truncate mt-0.5">{user.email}</p>
+                  <div className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-accent/20 border border-accent/30 text-[9px] font-black text-accent uppercase">
+                    VIP Member
+                  </div>
+                </div>
+                <div className="py-1">
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-white/5 rounded-xl transition-all"
+                  >
+                    <i className="ph-bold ph-user text-sm text-accent"></i>
+                    Profile & Settings
+                  </Link>
+                  <Link
+                    href="/watchlist"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-white/80 hover:text-white hover:bg-white/5 rounded-xl transition-all"
+                  >
+                    <i className="ph-bold ph-heart text-sm text-accent"></i>
+                    My Watchlist
+                  </Link>
+                </div>
+                <div className="pt-1 border-t border-white/10">
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsUserMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
+                  >
+                    <i className="ph-bold ph-sign-out text-sm"></i>
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => openAuthModal("login")}
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white/5 hover:bg-white/10 border border-white/15 hover:border-accent/40 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer shrink-0"
+            aria-label="Sign In"
+          >
+            <i className="ph-bold ph-user text-xs text-accent"></i>
+            <span>Sign In</span>
+          </button>
         )}
       </div>
 

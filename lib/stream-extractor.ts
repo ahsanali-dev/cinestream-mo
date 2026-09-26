@@ -477,7 +477,7 @@ async function extractNetMirrorEmbed(
         ],
         subtitles,
         audioTracks: audioTracks,
-        provider: "NetMirror Ultra Cloud HD",
+        provider: "Ultra Cloud HD (Server 2)",
         referer: `${netMirrorBase}/`,
       };
 
@@ -763,7 +763,7 @@ export async function probeAllServerLanguages(
         serverId: "server1",
         serverName: "Server 1 (CineStream Ultra Fast HD)",
         serverBadge: info.code === "HIN" ? "Hindi Dubbed HD" : "Multi-Audio HD",
-        provider: "NetMirror Ultra Cloud HD",
+        provider: "Ultra Cloud HD (Server 2)",
         isDefault: false,
       });
     }
