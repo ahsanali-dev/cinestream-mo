@@ -46,10 +46,11 @@ if (!global._inMemoryStore) {
       },
       netmirror: {
         enabled: true,
-        active_domain: "https://net77.cc",
+        active_domain: "https://net52.cc",
         backup_domains: [
-          "https://net77.cc",
+          "https://net52.cc",
           "https://mobidetect.art",
+          "https://net77.cc",
           "https://mobidetect.live",
           "https://mobidetect.pro",
         ],

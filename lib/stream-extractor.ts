@@ -52,7 +52,7 @@ const netMirrorCache = new Map<string, { data: StreamData | null; expiresAt: num
 const netMirrorInFlight = new Map<string, Promise<StreamData | null>>();
 const vixSrcInFlight = new Map<string, Promise<StreamData | null>>();
 
-const DEFAULT_NETMIRROR_BASE = "https://net77.cc";
+const DEFAULT_NETMIRROR_BASE = "https://net52.cc";
 const NET27_REFERER = "https://videodownloader.site/";
 
 export const NETMIRROR_AUTH_TOKEN =
@@ -89,7 +89,7 @@ const MOBIDETECT_POOLS = [
 ];
 
 export async function getActiveNetMirrorBase(): Promise<string> {
-  return "https://net77.cc";
+  return "https://net52.cc";
 }
 
 const VIXSRC_BASE = "https://vixsrc.to";
