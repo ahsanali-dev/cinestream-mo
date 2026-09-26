@@ -30,6 +30,14 @@ export async function GET() {
           moviebox: {
             ...inMemoryStore.config.moviebox,
             ...(configDoc.moviebox || {}),
+            auth_tokens:
+              Array.isArray(configDoc.moviebox?.auth_tokens) && configDoc.moviebox.auth_tokens.length > 0
+                ? configDoc.moviebox.auth_tokens
+                : inMemoryStore.config.moviebox.auth_tokens,
+            web_base:
+              configDoc.moviebox?.web_base ||
+              inMemoryStore.config.moviebox?.web_base ||
+              "https://moviebox.ac",
           },
           shorts_enabled: configDoc.shorts_enabled !== false,
           family_filter_enabled: configDoc.family_filter_enabled !== false,

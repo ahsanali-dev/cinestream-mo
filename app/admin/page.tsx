@@ -45,6 +45,8 @@ interface AppConfig {
     enabled: boolean;
     api_base: string;
     fallback_api: string;
+    web_base?: string;
+    auth_tokens?: string[];
   };
   updated_at?: string;
 }
@@ -87,6 +89,9 @@ export default function AdminDashboard() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<string>("");
+  const [isMintingToken, setIsMintingToken] = useState(false);
+  const [isTestingTokens, setIsTestingTokens] = useState(false);
+  const [tokenNotice, setTokenNotice] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
 
   // Check admin session on initial mount
   useEffect(() => {
@@ -237,6 +242,78 @@ export default function AdminDashboard() {
       console.error("Failed to save config:", err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleMintToken = async () => {
+    if (!adminToken) return;
+    setIsMintingToken(true);
+    setTokenNotice(null);
+    try {
+      const res = await fetch("/api/admin/refresh-tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ action: "mint" }),
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        setTokenNotice({
+          text: `✅ Fresh live token minted & tested! Streams: ${data.testResult?.streamsCount || 3}. Saved to database & synced to apps!`,
+          type: "success",
+        });
+        if (config) {
+          const current = config.moviebox?.auth_tokens || [];
+          const updated = [data.token, ...current.filter((t: string) => t !== data.token)].slice(0, 6);
+          setConfig({
+            ...config,
+            moviebox: {
+              ...config.moviebox,
+              auth_tokens: updated,
+            },
+          });
+        }
+      } else {
+        setTokenNotice({
+          text: `❌ ${data.error || "Failed to mint token"}`,
+          type: "error",
+        });
+      }
+    } catch (e: any) {
+      setTokenNotice({ text: `❌ ${e.message}`, type: "error" });
+    } finally {
+      setIsMintingToken(false);
+    }
+  };
+
+  const handleTestTokens = async () => {
+    if (!adminToken) return;
+    setIsTestingTokens(true);
+    setTokenNotice(null);
+    try {
+      const res = await fetch("/api/admin/refresh-tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ action: "test_all" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTokenNotice({
+          text: `📊 Token Health: ${data.healthyTokens}/${data.totalTokens} active tokens delivering streams!`,
+          type: data.healthyTokens > 0 ? "success" : "error",
+        });
+      } else {
+        setTokenNotice({ text: `❌ ${data.error}`, type: "error" });
+      }
+    } catch (e: any) {
+      setTokenNotice({ text: `❌ ${e.message}`, type: "error" });
+    } finally {
+      setIsTestingTokens(false);
     }
   };
 
@@ -906,6 +983,93 @@ export default function AdminDashboard() {
                       className="w-full bg-[#080A0F] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#FF6A00]"
                       placeholder="https://filmboom.top"
                     />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-zinc-400">
+                      MovieBox Web & Referer Domain (Slug Gateway)
+                    </label>
+                    <input
+                      type="text"
+                      value={config.moviebox?.web_base || ""}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          moviebox: {
+                            ...config.moviebox,
+                            web_base: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full bg-[#080A0F] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#FF6A00]"
+                      placeholder="https://moviebox.ac"
+                    />
+                  </div>
+
+                  {/* Dynamic MovieBox Token Pool with Live Auto-Mint */}
+                  <div className="space-y-2 pt-2 border-t border-white/5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <label className="text-[11px] font-bold text-zinc-300 flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                        Live Auth Tokens Pool ({(config.moviebox?.auth_tokens || []).length} active)
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleTestTokens}
+                          disabled={isTestingTokens || !config}
+                          className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isTestingTokens ? "animate-spin" : ""}`} />
+                          Verify All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleMintToken}
+                          disabled={isMintingToken || !config}
+                          className="px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                        >
+                          <Zap className={`w-3 h-3 ${isMintingToken ? "animate-bounce" : ""}`} />
+                          Auto-Mint Fresh Token
+                        </button>
+                      </div>
+                    </div>
+
+                    {tokenNotice && (
+                      <div
+                        className={`text-xs px-3.5 py-2.5 rounded-xl border flex items-center gap-2 ${
+                          tokenNotice.type === "success"
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                            : "bg-red-500/10 border-red-500/30 text-red-300"
+                        }`}
+                      >
+                        <span className="text-sm">{tokenNotice.type === "success" ? "⚡" : "⚠️"}</span>
+                        <span>{tokenNotice.text}</span>
+                      </div>
+                    )}
+
+                    <textarea
+                      rows={3}
+                      value={(config.moviebox?.auth_tokens || []).join("\n")}
+                      onChange={(e) => {
+                        const lines = e.target.value
+                          .split("\n")
+                          .map((l) => l.trim())
+                          .filter((l) => l.length > 20);
+                        setConfig({
+                          ...config,
+                          moviebox: {
+                            ...config.moviebox,
+                            auth_tokens: lines,
+                          },
+                        });
+                      }}
+                      className="w-full bg-[#080A0F] border border-white/10 rounded-xl px-4 py-2.5 text-[11px] text-zinc-300 font-mono focus:outline-none focus:border-[#FF6A00]"
+                      placeholder="One JWT token per line (or click Auto-Mint Fresh Token above)..."
+                    />
+                    <p className="text-[10px] text-zinc-500">
+                      Devices automatically rotate through this verified token pool. If any token expires, devices seamlessly failover without app updates or user interruption.
+                    </p>
                   </div>
                 </div>
               </div>

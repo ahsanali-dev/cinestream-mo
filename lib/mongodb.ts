@@ -56,6 +56,13 @@ if (!global._inMemoryStore) {
         enabled: true,
         api_base: "https://h5-api.aoneroom.com",
         fallback_api: "https://filmboom.top",
+        web_base: "https://moviebox.ac",
+        auth_tokens: [
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjg1NjEzMjQ4ODAxNTEwNzc0MjQsImF0cCI6MywiZXh0IjoiMTc5MDQ0MzY4MyIsImV4cCI6MTc5ODIxOTY4MywiaWF0IjoxNzkwNDQzMzgzfQ.smdaCiqqWBo06dqoFctDUzLmUA_xvAh_7Ct3rz4yfxs",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjMyNDUyMzE1ODM0MjcyOTEwNjQsImF0cCI6MywiZXh0IjoiMTc5MDE5NjgxMyIsImV4cCI6MTc5Nzk3MjgxMywiaWF0IjoxNzkwMTk2NTEzfQ.E-JCGkE2oSMEkaht3SEHZdeLwBLomyRNg7HBLLQWghg",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjMwNTY4MDAyMzU1OTc0ODgwNDAsImF0cCI6MywiZXh0IjoiMTc5MDQ0MzY4NSIsImV4cCI6MTc5ODIxOTY4NSwiaWF0IjoxNzkwNDQzMzQ1fQ.eqxaKmqEFVzHD8y2OtVPxd_udQAbiC82FYlPNWgkHCI",
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOjU1OTAzNTY1MDA5Njg2MjM4MDgsImF0cCI6MywiZXh0IjoiMTc5MDQ0MzQyNCIsImV4cCI6MTc5ODIxOTQyNCwiaWF0IjoxNzkwNDQzMTI0fQ.Vp5KZXtIONynkfnl72S3SCSeMvjpk2NoA9Zy_8NpIdY",
+        ],
         auth_refresh_interval_days: 7,
       },
       updated_at: new Date().toISOString(),
