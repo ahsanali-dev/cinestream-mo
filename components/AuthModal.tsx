@@ -57,23 +57,28 @@ export default function AuthModal() {
 
     let isMounted = true;
 
+    let isGsiInitialized = false;
+
     const initGsi = () => {
       if (typeof window !== "undefined" && (window as any).google?.accounts?.id) {
         try {
-          (window as any).google.accounts.id.initialize({
-            client_id: clientId,
-            callback: async (response: any) => {
-              if (response?.credential) {
-                setGoogleLoading(true);
-                setError(null);
-                const res = await loginWithGoogle({ credential: response.credential });
-                setGoogleLoading(false);
-                if (!res.success) {
-                  setError(res.error || "Google sign-in failed.");
+          if (!isGsiInitialized) {
+            (window as any).google.accounts.id.initialize({
+              client_id: clientId,
+              callback: async (response: any) => {
+                if (response?.credential) {
+                  setGoogleLoading(true);
+                  setError(null);
+                  const res = await loginWithGoogle({ credential: response.credential });
+                  setGoogleLoading(false);
+                  if (!res.success) {
+                    setError(res.error || "Google sign-in failed.");
+                  }
                 }
-              }
-            },
-          });
+              },
+            });
+            isGsiInitialized = true;
+          }
 
           if (googleBtnRef.current && isMounted) {
             googleBtnRef.current.innerHTML = "";
