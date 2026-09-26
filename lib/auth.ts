@@ -81,6 +81,55 @@ export function verifyToken(token: string): { userId: string; email: string } | 
 }
 
 /**
+ * Generate a signed Admin session token
+ */
+export function generateAdminToken(): string {
+  const payload = Buffer.from(
+    JSON.stringify({
+      role: "admin",
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 7 * 86400 * 1000, // 7 days
+    })
+  ).toString("base64url");
+
+  const signature = crypto
+    .createHmac("sha256", AUTH_SECRET)
+    .update(payload)
+    .digest("base64url");
+
+  return `adm_${payload}.${signature}`;
+}
+
+/**
+ * Verify Admin session token
+ */
+export function verifyAdminToken(token: string): boolean {
+  try {
+    if (!token || typeof token !== "string" || !token.startsWith("adm_")) return false;
+    const raw = token.slice(4);
+    const parts = raw.split(".");
+    if (parts.length !== 2) return false;
+
+    const [payloadB64, signature] = parts;
+    const expectedSig = crypto
+      .createHmac("sha256", AUTH_SECRET)
+      .update(payloadB64)
+      .digest("base64url");
+
+    if (signature !== expectedSig) return false;
+
+    const payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"));
+    if (payload.role !== "admin") return false;
+    if (Date.now() > payload.expiresAt) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
+/**
  * Get user by verified token from MongoDB or fallback in-memory store
  */
 export async function getUserFromToken(token: string): Promise<UserSession | null> {

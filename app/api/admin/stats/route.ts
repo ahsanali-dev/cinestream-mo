@@ -1,20 +1,41 @@
 import { NextResponse } from "next/server";
 import { getDb, inMemoryStore, isMongoConfigured } from "@/lib/mongodb";
+import { verifyAdminToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, x-admin-key",
 };
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const authHeader = req.headers.get("authorization") || "";
+    const tokenFromHeader = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const cookieHeader = req.headers.get("cookie") || "";
+    const cookieMatch = cookieHeader.match(/cinestream_admin_token=([^;]+)/);
+    const tokenFromCookie = cookieMatch ? cookieMatch[1] : "";
+    const xAdminKey = req.headers.get("x-admin-key") || "";
+
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin@movieszone2026";
+    const isAuthorized =
+      (tokenFromHeader && verifyAdminToken(tokenFromHeader)) ||
+      (tokenFromCookie && verifyAdminToken(tokenFromCookie)) ||
+      (xAdminKey && xAdminKey.trim() === ADMIN_PASSWORD.trim());
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: "Unauthorized access. Admin authentication required." },
+        { status: 401, headers: CORS_HEADERS }
+      );
+    }
+
     const now = Date.now();
     const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
     const startOfToday = new Date();

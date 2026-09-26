@@ -64,27 +64,6 @@ if (!global._inMemoryStore) {
     history: [],
     users: new Map(),
   };
-
-  // Seed sample mock devices if in memory so graph looks lively right away
-  const mockBrands = ["Samsung SM-S928B", "Xiaomi Redmi Note 13", "Infinix Zero 30", "Tecno Camon 20", "OnePlus 12"];
-  const now = Date.now();
-  for (let i = 0; i < 45; i++) {
-    const dId = `demo-dev-${i + 1}`;
-    const minutesAgo = Math.floor(Math.random() * 120);
-    const installDaysAgo = Math.floor(Math.random() * 14);
-    global._inMemoryStore.devices.set(dId, {
-      deviceId: dId,
-      deviceModel: mockBrands[i % mockBrands.length],
-      os: "android",
-      osVersion: "14",
-      appVersion: "1.1.1",
-      currentScreen: i % 2 === 0 ? "PlayerScreen" : "HomeScreen",
-      streamProvider: i % 3 === 0 ? "netmirror" : "moviebox",
-      installedAt: new Date(now - installDaysAgo * 86400000 - Math.random() * 3600000),
-      lastActiveAt: new Date(now - minutesAgo * 60000),
-      pingCount: Math.floor(Math.random() * 50) + 1,
-    });
-  }
 }
 
 export function isMongoConfigured(): boolean {

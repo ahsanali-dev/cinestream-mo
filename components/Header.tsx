@@ -165,36 +165,36 @@ export default function Header() {
   if (!mounted) {
     return (
       <header
-        className="fixed top-0 left-0 md:left-20 right-0 z-50 flex h-16 md:h-20 items-center justify-between px-4 sm:px-8 md:px-16 transition-all duration-500 bg-transparent border-b border-transparent"
+        className="fixed top-0 left-0 md:left-20 right-0 z-50 flex h-14 sm:h-16 md:h-20 items-center justify-between px-3 sm:px-8 md:px-16 transition-all duration-500 bg-transparent border-b border-transparent"
       >
-        <Link href="/" className="md:hidden flex items-center gap-2 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95 outline-none focus:outline-none select-none">
-          <img src="/logo.png" alt="MoviesZone" className="w-8 h-8 object-contain" />
-          <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">MoviesZone</span>
+        <Link href="/" className="md:hidden flex items-center gap-1.5 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95 outline-none focus:outline-none select-none">
+          <img src="/logo.png" alt="MoviesZone" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+          <span className="text-lg sm:text-2xl font-black text-accent tracking-tighter italic">MoviesZone</span>
         </Link>
         <div className="hidden md:block" />
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0"></div>
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0"></div>
       </header>
     );
   }
 
   return (
     <header
-      className={`fixed top-0 left-0 md:left-20 right-0 z-50 flex h-16 md:h-20 items-center justify-between px-4 sm:px-8 md:px-16 transition-all duration-500 ${
+      className={`fixed top-0 left-0 md:left-20 right-0 z-50 flex h-14 sm:h-16 md:h-20 items-center justify-between px-3 sm:px-8 md:px-16 transition-all duration-500 ${
         isScrolled
-          ? "bg-black/60 backdrop-blur-md border-b border-white/5 shadow-lg"
+          ? "bg-black/80 backdrop-blur-md border-b border-white/5 shadow-lg"
           : "bg-transparent border-b border-transparent"
       }`}
     >
       {/* Brand logo (visible only on mobile because sidebar handles desktop) */}
-      <Link href="/" className="md:hidden flex items-center gap-2 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95">
-        <img src="/logo.png" alt="MoviesZone" className="w-8 h-8 object-contain" />
-        <span className="text-xl sm:text-2xl font-black text-accent tracking-tighter italic">MoviesZone</span>
+      <Link href="/" className="md:hidden flex items-center gap-1.5 shrink-0 cursor-pointer transition-transform duration-300 active:scale-95">
+        <img src="/logo.png" alt="MoviesZone" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+        <span className="text-lg sm:text-2xl font-black text-accent tracking-tighter italic">MoviesZone</span>
       </Link>
 
       {/* Spacing element to push search to the right on desktop */}
       <div className="hidden md:block" />
 
-      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
         {/* Desktop Search */}
         {mounted && !isExplorePage && (
           <div ref={containerRef} className="hidden md:block relative">
@@ -324,10 +324,11 @@ export default function Header() {
         {mounted && !isExplorePage && (
           <button
             onClick={() => setIsMobileSearchOpen(true)}
-            className="md:hidden flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#a0a0a0] hover:text-white active:scale-95 transition-all cursor-pointer shrink-0"
+            className="md:hidden flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-[#a0a0a0] hover:text-white active:scale-95 transition-all cursor-pointer shrink-0"
             aria-label="Search"
+            title="Search Movies & Shows"
           >
-            <i className="ph-bold ph-magnifying-glass text-base"></i>
+            <i className="ph-bold ph-magnifying-glass text-sm sm:text-base"></i>
           </button>
         )}
 
@@ -335,12 +336,12 @@ export default function Header() {
           <div className="group relative shrink-0">
             <button
               onClick={handleInstallClick}
-              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-gradient-to-r from-accent/30 to-accent/10 hover:from-accent/40 hover:to-accent/20 border border-accent/30 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(255,106,0,0.15)] active:scale-95 cursor-pointer shrink-0"
+              className="flex items-center justify-center gap-1.5 h-8 w-8 sm:h-auto sm:w-auto sm:px-3.5 sm:py-2 bg-gradient-to-r from-accent/30 to-accent/10 hover:from-accent/40 hover:to-accent/20 border border-accent/30 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_0_15px_rgba(255,106,0,0.15)] active:scale-95 cursor-pointer shrink-0"
               aria-label="Install MoviesZone App"
+              title="Install Android App (.APK)"
             >
-              <i className="ph-bold ph-arrow-line-down text-xs text-accent"></i>
+              <i className="ph-bold ph-arrow-line-down text-sm sm:text-xs text-accent"></i>
               <span className="hidden sm:inline">Install App</span>
-              <span className="inline sm:hidden">Install</span>
             </button>
             
             {/* Tooltip / Suggestion on Hover */}
@@ -356,7 +357,7 @@ export default function Header() {
           <div className="relative shrink-0" ref={userMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-              className="flex items-center gap-2 p-1 sm:pl-2 sm:pr-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all cursor-pointer group"
+              className="flex items-center gap-1.5 p-0.5 sm:pl-2 sm:pr-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full transition-all cursor-pointer group"
               aria-label="User Account"
             >
               <img
@@ -367,7 +368,7 @@ export default function Header() {
               <span className="hidden sm:inline text-xs font-bold text-white max-w-[90px] truncate">
                 {user.name.split(" ")[0]}
               </span>
-              <i className="ph-bold ph-caret-down text-white/50 text-[10px]"></i>
+              <i className="hidden sm:inline ph-bold ph-caret-down text-white/50 text-[10px]"></i>
             </button>
 
             {/* Dropdown Menu */}
@@ -416,11 +417,12 @@ export default function Header() {
         ) : (
           <button
             onClick={() => openAuthModal("login")}
-            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white/5 hover:bg-white/10 border border-white/15 hover:border-accent/40 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer shrink-0"
+            className="flex items-center justify-center gap-1.5 h-8 w-8 sm:h-auto sm:w-auto sm:px-3 sm:py-2 bg-white/5 hover:bg-white/10 border border-white/15 hover:border-accent/40 text-white text-[10px] sm:text-[11px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer shrink-0"
             aria-label="Sign In"
+            title="Sign In / Register"
           >
-            <i className="ph-bold ph-user text-xs text-accent"></i>
-            <span>Sign In</span>
+            <i className="ph-bold ph-user text-sm sm:text-xs text-accent"></i>
+            <span className="hidden sm:inline">Sign In</span>
           </button>
         )}
       </div>
