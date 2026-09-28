@@ -114,6 +114,17 @@ export default function AuthModal() {
     };
   }, [isAuthModalOpen, loginWithGoogle]);
 
+  // Lock background body scroll when auth modal is open
+  useEffect(() => {
+    if (isAuthModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow || "";
+      };
+    }
+  }, [isAuthModalOpen]);
+
   // Handle ESC key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -227,12 +238,18 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-xl animate-fade-in">
+    <div 
+      onClick={closeAuthModal}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl animate-fade-in"
+    >
       {/* Background glow effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent/20 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#0e1118]/95 p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl transition-all">
+      <div 
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md max-h-[92dvh] overflow-y-auto custom-scrollbar rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0e1118]/95 p-5 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl transition-all"
+      >
         {/* Close Button */}
         <button
           onClick={closeAuthModal}

@@ -338,7 +338,7 @@ export default function AdminDashboard() {
   // 1. Initial Loading Screen
   if (isAdminAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-[#080A0F] flex items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-[#080A0F] flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#FF6A00] border-t-transparent" />
       </div>
     );
@@ -347,15 +347,15 @@ export default function AdminDashboard() {
   // 2. Admin Login Security Gate (Restricted Access)
   if (!isAdminAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#080A0F] text-[#F3F4F6] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="fixed inset-0 z-50 bg-[#080A0F] text-[#F3F4F6] flex items-center justify-center p-4 overflow-y-auto">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#FF6A00]/20 rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#0e1118]/95 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+        <div className="relative w-full max-w-md my-auto rounded-3xl border border-white/10 bg-[#0e1118]/95 p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#FF6A00] to-[#FFAA00] flex items-center justify-center shadow-lg shadow-[#FF6A00]/30 mb-4">
-              <Lock className="w-7 h-7 text-white" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-[#FF6A00] to-[#FFAA00] flex items-center justify-center shadow-lg shadow-[#FF6A00]/30 mb-3 sm:mb-4">
+              <Lock className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
               MoviesZone <span className="text-[#FF6A00] font-light">Admin Gate</span>
             </h1>
             <p className="text-xs text-zinc-400 mt-1.5 max-w-[280px]">
