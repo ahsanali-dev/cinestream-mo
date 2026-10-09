@@ -118,7 +118,7 @@ export default function Hero() {
         autoplay={{ delay: 5000, disableOnInteraction: false, pauseOnMouseEnter: true }}
         pagination={{ clickable: true, dynamicBullets: true }}
         navigation={true}
-        loop={true}
+        loop={movies.length > 1}
         className="h-full w-full hero-swiper"
       >
         {movies.map((movie, idx) => {
