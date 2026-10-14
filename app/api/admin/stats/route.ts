@@ -14,6 +14,9 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
 
+let cachedStatsPayload: any = null;
+let cachedStatsAt = 0;
+
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get("authorization") || "";
@@ -37,6 +40,15 @@ export async function GET(req: Request) {
     }
 
     const now = Date.now();
+
+    // Fast return cached stats if computed within last 30 seconds
+    if (cachedStatsPayload && now - cachedStatsAt < 30 * 1000) {
+      return NextResponse.json(
+        { success: true, stats: cachedStatsPayload, cached: true },
+        { headers: CORS_HEADERS }
+      );
+    }
+
     const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -49,7 +61,26 @@ export async function GET(req: Request) {
 
     if (db) {
       try {
-        allDevices = await db.collection("devices").find({}).toArray();
+        allDevices = await db
+          .collection("devices")
+          .find(
+            {},
+            {
+              projection: {
+                deviceId: 1,
+                deviceModel: 1,
+                os: 1,
+                osVersion: 1,
+                lastActiveAt: 1,
+                installedAt: 1,
+                currentScreen: 1,
+                pingCount: 1,
+              },
+            }
+          )
+          .sort({ lastActiveAt: -1 })
+          .limit(1000)
+          .toArray();
         isConnectedToMongo = true;
       } catch (e) {
         console.warn("MongoDB query failed, falling back to inMemoryStore:", e);
@@ -135,17 +166,67 @@ export async function GET(req: Request) {
       });
     }
 
-    // Recent 10 devices
+    // Map legacy Android SDK / API versions to user-friendly Android versions
+    const ANDROID_API_MAP: Record<string, string> = {
+      "21": "Android 5.0",
+      "22": "Android 5.1",
+      "23": "Android 6.0",
+      "24": "Android 7.0",
+      "25": "Android 7.1",
+      "26": "Android 8.0",
+      "27": "Android 8.1",
+      "28": "Android 9 (Pie)",
+      "29": "Android 10",
+      "30": "Android 11",
+      "31": "Android 12",
+      "32": "Android 12L",
+      "33": "Android 13",
+      "34": "Android 14",
+      "35": "Android 15",
+      "36": "Android 16",
+      "37": "Android 17",
+    };
+
+    const formatDeviceModel = (model?: string, osVersion?: string): string => {
+      if (!model) return "Android Device";
+      const clean = model.trim();
+      // Handle legacy placeholder strings from older app builds stored in MongoDB Atlas
+      const match = clean.match(/Android Phone \((\d+)\)/i);
+      if (match) {
+        const api = match[1];
+        const friendlyName = ANDROID_API_MAP[api] || `API ${api}`;
+        return `Android Device (${friendlyName})`;
+      }
+      if (clean.includes("iOS Device")) return "Apple iPhone";
+      return clean;
+    };
+
+    const formatOS = (os?: string, osVersion?: string): string => {
+      const osName = (os || "Android").toLowerCase();
+      if (osName === "android") {
+        if (osVersion && ANDROID_API_MAP[osVersion]) {
+          return ANDROID_API_MAP[osVersion];
+        }
+        if (osVersion && !isNaN(Number(osVersion)) && Number(osVersion) >= 20) {
+          return ANDROID_API_MAP[osVersion] || `Android API ${osVersion}`;
+        }
+        return `Android ${osVersion || "14"}`;
+      }
+      if (osName === "ios") return `iOS ${osVersion || "17"}`;
+      return `${os || "Android"} ${osVersion || ""}`.trim();
+    };
+
+    // Recent connected devices (Top 50 sorted by last active)
     const recentDevices = [...allDevices]
       .sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime())
-      .slice(0, 10)
+      .slice(0, 50)
       .map((d) => {
         const lastActive = new Date(d.lastActiveAt);
         const isLive = lastActive >= fiveMinutesAgo;
         return {
           deviceId: d.deviceId,
-          deviceModel: d.deviceModel,
-          os: `${d.os || "Android"} ${d.osVersion || "14"}`,
+          deviceModel: formatDeviceModel(d.deviceModel, d.osVersion),
+          os: formatOS(d.os, d.osVersion),
           appVersion: d.appVersion || "1.0.0",
           currentScreen: d.currentScreen || "HomeScreen",
           lastActiveAt: d.lastActiveAt,
@@ -154,22 +235,27 @@ export async function GET(req: Request) {
         };
       });
 
+    const statsPayload = {
+      totalInstalls,
+      liveUsers,
+      todayActive,
+      weeklyActive,
+      activityTimeline,
+      installTrend,
+      deviceBrands: sortedBrands,
+      osCounts,
+      recentDevices,
+      isMongoConnected: isConnectedToMongo,
+      isMongoConfigured: isMongoConfigured(),
+    };
+
+    cachedStatsPayload = statsPayload;
+    cachedStatsAt = Date.now();
+
     return NextResponse.json(
       {
         success: true,
-        stats: {
-          totalInstalls,
-          liveUsers,
-          todayActive,
-          weeklyActive,
-          activityTimeline,
-          installTrend,
-          deviceBrands: sortedBrands,
-          osCounts,
-          recentDevices,
-          isMongoConnected: isConnectedToMongo,
-          isMongoConfigured: isMongoConfigured(),
-        },
+        stats: statsPayload,
       },
       { headers: CORS_HEADERS }
     );

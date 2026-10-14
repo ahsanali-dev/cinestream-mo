@@ -71,32 +71,39 @@ export async function GET(request: NextRequest) {
     ) || movie.videos?.results?.find((v: any) => v.site === "YouTube");
     const trailerKey = trailer?.key || null;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: movie.id,
-        title,
-        overview: movie.overview,
-        poster_path: movie.poster_path,
-        backdrop_path: movie.backdrop_path,
-        vote_average: movie.vote_average,
-        release_date: releaseDate,
-        releaseYear,
-        runtime: rawRuntime,
-        certification,
-        contentAdvisory,
-        genres: movie.genres || [],
-        cast,
-        director,
-        seasons: movie.seasons || [],
-        spoken_languages: movie.spoken_languages || [],
-        original_language: movie.original_language,
-        recommendations,
-        type,
-        trailerKey,
-        source: extractMediaSource(movie),
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: movie.id,
+          title,
+          overview: movie.overview,
+          poster_path: movie.poster_path,
+          backdrop_path: movie.backdrop_path,
+          vote_average: movie.vote_average,
+          release_date: releaseDate,
+          releaseYear,
+          runtime: rawRuntime,
+          certification,
+          contentAdvisory,
+          genres: movie.genres || [],
+          cast,
+          director,
+          seasons: movie.seasons || [],
+          spoken_languages: movie.spoken_languages || [],
+          original_language: movie.original_language,
+          recommendations,
+          type,
+          trailerKey,
+          source: extractMediaSource(movie),
+        },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      }
+    );
   } catch (error: any) {
     console.error("API details error:", error);
     return NextResponse.json(

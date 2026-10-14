@@ -82,12 +82,109 @@ export async function testMovieBoxToken(
   }
 }
 
+let lastVerifiedHealthyToken = "";
+let lastVerifiedAt = 0;
+
+/**
+ * Automatically obtains a verified, working MovieBox token.
+ * If current token in pool is expired/rate-limited or forceRefresh is true,
+ * it auto-mints a fresh token from MovieBox, verifies playback streams,
+ * and updates MongoDB Atlas automatically.
+ */
+export async function getOrRefreshHealthyToken(forceRefresh = false): Promise<{
+  token: string | null;
+  source: "cached_healthy" | "pool_verified" | "minted_live" | "fallback_pool";
+  message?: string;
+}> {
+  const apiBase = inMemoryStore.config.moviebox?.api_base || "https://h5-api.aoneroom.com";
+  const webBase = inMemoryStore.config.moviebox?.web_base || "https://moviebox.ac";
+
+  // Fast-path: if not forced and last token was verified healthy within 5 minutes
+  if (
+    !forceRefresh &&
+    lastVerifiedHealthyToken &&
+    Date.now() - lastVerifiedAt < 5 * 60 * 1000
+  ) {
+    return { token: lastVerifiedHealthyToken, source: "cached_healthy" };
+  }
+
+  // Fetch current pool from MongoDB Atlas or in-memory
+  let pool: string[] = inMemoryStore.config.moviebox?.auth_tokens || [];
+  try {
+    const db = await getDb();
+    if (db) {
+      const doc = await db.collection("app_config").findOne({ _id: "global_config" as any });
+      if (doc?.moviebox?.auth_tokens && Array.isArray(doc.moviebox.auth_tokens) && doc.moviebox.auth_tokens.length > 0) {
+        pool = doc.moviebox.auth_tokens;
+        if (inMemoryStore.config.moviebox) {
+          inMemoryStore.config.moviebox.auth_tokens = pool;
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 1. If not forcing a brand-new mint, test the current top token
+  if (!forceRefresh && pool.length > 0) {
+    const topToken = pool[0];
+    const testResult = await testMovieBoxToken(topToken, apiBase, webBase);
+    if (testResult.ok) {
+      lastVerifiedHealthyToken = topToken;
+      lastVerifiedAt = Date.now();
+      return { token: topToken, source: "pool_verified" };
+    }
+    console.warn(
+      `[MovieBoxTokenServer] Current pool token failed validation (${testResult.message}). Auto-minting fresh token...`
+    );
+  }
+
+  // 2. Auto-mint a brand new live token from MovieBox gateway
+  const freshToken = await mintFreshMovieBoxToken(apiBase);
+  if (freshToken) {
+    const testFresh = await testMovieBoxToken(freshToken, apiBase, webBase);
+    if (testFresh.ok) {
+      await addVerifiedTokenToPool(freshToken);
+      lastVerifiedHealthyToken = freshToken;
+      lastVerifiedAt = Date.now();
+      return { token: freshToken, source: "minted_live" };
+    } else {
+      console.warn(`[MovieBoxTokenServer] Freshly minted token failed verification: ${testFresh.message}`);
+    }
+  }
+
+  // 3. Fallback: check remaining tokens in the pool
+  for (let i = 1; i < pool.length; i++) {
+    const fallbackToken = pool[i];
+    const test = await testMovieBoxToken(fallbackToken, apiBase, webBase);
+    if (test.ok) {
+      await addVerifiedTokenToPool(fallbackToken);
+      lastVerifiedHealthyToken = fallbackToken;
+      lastVerifiedAt = Date.now();
+      return { token: fallbackToken, source: "pool_verified" };
+    }
+  }
+
+  // 4. Ultimate fallback: if gateway was down, return top pool token anyway
+  if (pool.length > 0) {
+    return { token: pool[0], source: "fallback_pool", message: "Gateway unreachable, returned best available" };
+  }
+
+  return { token: null, source: "fallback_pool", message: "No tokens available" };
+}
+
 /**
  * Stores a verified token in the MongoDB Atlas pool and in-memory store.
  */
 export async function addVerifiedTokenToPool(token: string): Promise<string[]> {
-  const currentTokens: string[] =
-    inMemoryStore.config.moviebox?.auth_tokens || [];
+  let currentTokens: string[] = inMemoryStore.config.moviebox?.auth_tokens || [];
+  try {
+    const db = await getDb();
+    if (db) {
+      const doc = await db.collection("app_config").findOne({ _id: "global_config" as any });
+      if (doc?.moviebox?.auth_tokens && Array.isArray(doc.moviebox.auth_tokens)) {
+        currentTokens = doc.moviebox.auth_tokens;
+      }
+    }
+  } catch {}
 
   // Filter existing, prepend new token, keep top 6
   const updatedTokens = [token, ...currentTokens.filter((t) => t !== token)].slice(0, 6);

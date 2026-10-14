@@ -15,6 +15,16 @@ const CORS_HEADERS = {
 };
 
 /**
+ * Offload multi-gigabyte video binary chunks (.ts, .jpg, .mp4) to Cloudflare Worker
+ * with unlimited free bandwidth, keeping Vercel strictly on lightweight manifest proxying.
+ */
+const CF_WORKER_PROXY =
+  process.env.CLOUDFLARE_WORKER_PROXY_URL ||
+  process.env.STREAM_PROXY_URL ||
+  process.env.DENO_PROXY_URL ||
+  "https://cinestream-proxy.ahsan-dev98.workers.dev";
+
+/**
  * Robust URL sanitizer for upstream CDN & M3U8 relative/malformed paths
  */
 function sanitizeTargetUrl(rawUrl: string, baseUrl: string): string | null {
@@ -512,13 +522,24 @@ export async function GET(request: NextRequest) {
             rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
           } else if (line.startsWith("http://") || line.startsWith("https://")) {
             // Absolute segment URL from edge CDN (e.g. *.redzebra93.fun) has native CORS (*). Keep direct for ultra-fast zero-proxy streaming.
-            rewrittenLines.push(line);
+            if (line.includes("redzebra93.fun") || line.includes("vixsrc")) {
+              rewrittenLines.push(line);
+            } else if (CF_WORKER_PROXY) {
+              rewrittenLines.push(`${CF_WORKER_PROXY}?url=${encodeURIComponent(line)}`);
+            } else {
+              const encryptedToken = encryptStreamUrl(line, referer);
+              rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
+            }
           } else {
             // Relative segment (.ts / .jpg)
             const fullSegmentUrl =
               sanitizeTargetUrl(line, targetUrl) || new URL(line, targetUrl).href;
-            const encryptedToken = encryptStreamUrl(fullSegmentUrl, referer);
-            rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
+            if (CF_WORKER_PROXY) {
+              rewrittenLines.push(`${CF_WORKER_PROXY}?url=${encodeURIComponent(fullSegmentUrl)}`);
+            } else {
+              const encryptedToken = encryptStreamUrl(fullSegmentUrl, referer);
+              rewrittenLines.push(`/api/stream/proxy?d=${encryptedToken}`);
+            }
           }
         }
       }
@@ -540,8 +561,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Binary video segments (.ts, .jpg, .mp4) or subtitles (.vtt)
-    const headers = new Headers();
-    // NetMirror audio segments are named .js and video segments are named .jpg - both are MPEG-TS
     const isMpegTs =
       targetUrl.includes("freecdn") ||
       targetUrl.includes("nm-cdn") ||
@@ -549,6 +568,17 @@ export async function GET(request: NextRequest) {
       targetUrl.endsWith(".ts") ||
       targetUrl.endsWith(".js") ||
       (targetUrl.endsWith(".jpg") && targetUrl.includes("/files/"));
+
+    // If an incoming request is for a heavy binary video segment, redirect to Cloudflare Worker
+    // so Vercel does not burn bandwidth or function execution time!
+    if (CF_WORKER_PROXY && isMpegTs) {
+      return NextResponse.redirect(
+        `${CF_WORKER_PROXY}?url=${encodeURIComponent(targetUrl)}`,
+        307
+      );
+    }
+
+    const headers = new Headers();
 
     headers.set(
       "Content-Type",

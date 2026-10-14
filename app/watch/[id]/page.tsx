@@ -93,6 +93,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   }
 }
 
+export const revalidate = 86400; // Cache watch page metadata & structure at Edge for 24 hours
+
 export default async function WatchPage({ params, searchParams }: PageProps) {
   const { id: rawId } = await params;
   const { type = "movie", t, s, e, play } = await searchParams;

@@ -69,6 +69,7 @@ interface StatsData {
   installTrend: Array<{ date: string; installs: number }>;
   deviceBrands: Array<{ name: string; count: number }>;
   osCounts: Record<string, number>;
+  
   recentDevices: Array<{
     deviceId: string;
     deviceModel: string;
@@ -215,13 +216,27 @@ export default function AdminDashboard() {
     }
   }, [isAdminAuthenticated, fetchData]);
 
-  // Periodic Auto-Refresh
+  // Periodic Auto-Refresh (every 60s, paused when browser tab is hidden to save serverless execution quota)
   useEffect(() => {
     if (!isAdminAuthenticated || !autoRefresh) return;
+
     const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       fetchData();
-    }, 10000);
-    return () => clearInterval(interval);
+    }, 60000);
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        fetchData();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [isAdminAuthenticated, autoRefresh, fetchData]);
 
   const handleSaveConfig = async () => {
@@ -573,17 +588,17 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="h-44 flex items-end gap-1.5 pt-6 pb-2 px-2 border-b border-white/5">
+            <div className="h-44 flex gap-1.5 pt-6 pb-2 px-2 border-b border-white/5">
               {stats?.activityTimeline && stats.activityTimeline.length > 0 ? (
                 stats.activityTimeline.map((item, idx) => {
                   const heightPercent = maxActivity > 0 ? Math.round((item.active / maxActivity) * 100) : 0;
                   return (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-1 group relative">
+                    <div key={idx} className="flex-1 h-full flex flex-col justify-end items-center group relative">
                       <div
-                        style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                        style={{ height: item.active > 0 ? `${Math.max(heightPercent, 8)}%` : "4px" }}
                         className={`w-full rounded-t transition-all ${
                           item.active > 0
-                            ? "bg-gradient-to-t from-[#FF6A00] to-amber-400 group-hover:brightness-125"
+                            ? "bg-gradient-to-t from-[#FF6A00] to-amber-400 group-hover:brightness-125 shadow-sm shadow-[#FF6A00]/25"
                             : "bg-white/5 group-hover:bg-white/10"
                         }`}
                       />
@@ -1299,9 +1314,14 @@ export default function AdminDashboard() {
                 100% Real devices communicating with MoviesZone backend services (from MongoDB Atlas)
               </p>
             </div>
-            <span className="text-xs font-mono text-zinc-400">
-              Total Real Devices: {stats?.recentDevices?.length || 0}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-zinc-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                Fleet: <strong className="text-emerald-400">{stats?.totalInstalls || 0}</strong> Registered in DB
+              </span>
+              <span className="text-xs font-mono text-zinc-400 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+                Showing {stats?.recentDevices?.length || 0} Recent
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -1347,7 +1367,20 @@ export default function AdminDashboard() {
                       </td>
                       <td className="py-3 text-zinc-400">{device.pingCount}</td>
                       <td className="py-3 pr-2 text-zinc-400">
-                        {new Date(device.lastActiveAt).toLocaleTimeString()}
+                        <div className="flex flex-col">
+                          <span className="text-zinc-200 font-medium">
+                            {device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleTimeString() : "-"}
+                          </span>
+                          {device.lastActiveAt && (
+                            <span className="text-[10px] text-zinc-500">
+                              {new Date(device.lastActiveAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

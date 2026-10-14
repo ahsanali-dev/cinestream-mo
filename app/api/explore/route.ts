@@ -48,12 +48,19 @@ export async function GET(request: NextRequest) {
       results = await enrichWithPlatform(results, type === "tv" ? "tv" : "movie");
     }
 
-    return NextResponse.json({
-      success: true,
-      page,
-      results: results || [],
-      hasMore: (results?.length || 0) > 0,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        page,
+        results: results || [],
+        hasMore: (results?.length || 0) > 0,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json(
       {

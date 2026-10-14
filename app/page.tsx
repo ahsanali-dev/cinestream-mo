@@ -37,6 +37,8 @@ export const metadata: Metadata = {
   },
 };
 
+export const revalidate = 3600; // Cache homepage at the Edge for 1 hour with ISR
+
 export default async function Home() {
   const [
     trendingMovies, 
