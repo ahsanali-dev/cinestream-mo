@@ -20,15 +20,24 @@ export async function mintFreshMovieBoxToken(apiBase = "https://h5-api.aoneroom.
     });
 
     const xUser = res.headers.get("x-user") || res.headers.get("X-User");
-    if (!xUser) {
-      console.warn("[MovieBoxTokenServer] No x-user header returned from gateway");
-      return null;
+    if (xUser) {
+      try {
+        const parsed = typeof xUser === "string" ? JSON.parse(xUser) : xUser;
+        if (parsed && typeof parsed.token === "string" && parsed.token.length > 30) {
+          return parsed.token;
+        }
+      } catch {}
     }
 
-    const parsed = typeof xUser === "string" ? JSON.parse(xUser) : xUser;
-    if (parsed && typeof parsed.token === "string" && parsed.token.length > 30) {
-      return parsed.token;
+    const setCookie = res.headers.get("set-cookie") || res.headers.get("Set-Cookie");
+    if (setCookie) {
+      const match = setCookie.match(/token=([a-zA-Z0-9_\-\.]+)/);
+      if (match && match[1] && match[1].length > 30) {
+        return match[1];
+      }
     }
+
+    console.warn("[MovieBoxTokenServer] No x-user or set-cookie token returned from gateway");
   } catch (err) {
     console.error("[MovieBoxTokenServer] Error minting token:", err);
   }
@@ -93,51 +102,23 @@ let lastVerifiedAt = 0;
  */
 export async function getOrRefreshHealthyToken(forceRefresh = false): Promise<{
   token: string | null;
-  source: "cached_healthy" | "pool_verified" | "minted_live" | "fallback_pool";
+  source: "cached_healthy" | "minted_live" | "pool_verified" | "fallback_pool";
   message?: string;
 }> {
   const apiBase = inMemoryStore.config.moviebox?.api_base || "https://h5-api.aoneroom.com";
   const webBase = inMemoryStore.config.moviebox?.web_base || "https://moviebox.ac";
 
-  // Fast-path: if not forced and last token was verified healthy within 5 minutes
+  // Fast-path: if not forced and last token was verified healthy within 15 minutes
   if (
     !forceRefresh &&
     lastVerifiedHealthyToken &&
-    Date.now() - lastVerifiedAt < 5 * 60 * 1000
+    Date.now() - lastVerifiedAt < 15 * 60 * 1000
   ) {
     return { token: lastVerifiedHealthyToken, source: "cached_healthy" };
   }
 
-  // Fetch current pool from MongoDB Atlas or in-memory
-  let pool: string[] = inMemoryStore.config.moviebox?.auth_tokens || [];
-  try {
-    const db = await getDb();
-    if (db) {
-      const doc = await db.collection("app_config").findOne({ _id: "global_config" as any });
-      if (doc?.moviebox?.auth_tokens && Array.isArray(doc.moviebox.auth_tokens) && doc.moviebox.auth_tokens.length > 0) {
-        pool = doc.moviebox.auth_tokens;
-        if (inMemoryStore.config.moviebox) {
-          inMemoryStore.config.moviebox.auth_tokens = pool;
-        }
-      }
-    }
-  } catch (e) {}
-
-  // 1. If not forcing a brand-new mint, test the current top token
-  if (!forceRefresh && pool.length > 0) {
-    const topToken = pool[0];
-    const testResult = await testMovieBoxToken(topToken, apiBase, webBase);
-    if (testResult.ok) {
-      lastVerifiedHealthyToken = topToken;
-      lastVerifiedAt = Date.now();
-      return { token: topToken, source: "pool_verified" };
-    }
-    console.warn(
-      `[MovieBoxTokenServer] Current pool token failed validation (${testResult.message}). Auto-minting fresh token...`
-    );
-  }
-
-  // 2. Auto-mint a brand new live token from MovieBox gateway
+  // 1. DYNAMIC AUTO-MINT: Directly mint a brand new live token from MovieBox primary gateway
+  console.log("[MovieBoxTokenServer] Auto-minting fresh live token from primary gateway...");
   const freshToken = await mintFreshMovieBoxToken(apiBase);
   if (freshToken) {
     const testFresh = await testMovieBoxToken(freshToken, apiBase, webBase);
@@ -146,29 +127,44 @@ export async function getOrRefreshHealthyToken(forceRefresh = false): Promise<{
       lastVerifiedHealthyToken = freshToken;
       lastVerifiedAt = Date.now();
       return { token: freshToken, source: "minted_live" };
-    } else {
-      console.warn(`[MovieBoxTokenServer] Freshly minted token failed verification: ${testFresh.message}`);
     }
   }
 
-  // 3. Fallback: check remaining tokens in the pool
-  for (let i = 1; i < pool.length; i++) {
-    const fallbackToken = pool[i];
+  // 2. DYNAMIC AUTO-MINT: Try secondary gateway if primary failed
+  console.log("[MovieBoxTokenServer] Trying secondary gateway for auto-minting...");
+  const secondaryToken = await mintFreshMovieBoxToken("https://filmboom.top");
+  if (secondaryToken) {
+    const testSec = await testMovieBoxToken(secondaryToken, "https://filmboom.top", webBase);
+    if (testSec.ok) {
+      await addVerifiedTokenToPool(secondaryToken);
+      lastVerifiedHealthyToken = secondaryToken;
+      lastVerifiedAt = Date.now();
+      return { token: secondaryToken, source: "minted_live" };
+    }
+  }
+
+  // 3. Fallback: check dynamic pool in MongoDB Atlas only if both gateways failed to mint
+  let pool: string[] = inMemoryStore.config.moviebox?.auth_tokens || [];
+  try {
+    const db = await getDb();
+    if (db) {
+      const doc = await db.collection("app_config").findOne({ _id: "global_config" as any });
+      if (doc?.moviebox?.auth_tokens && Array.isArray(doc.moviebox.auth_tokens)) {
+        pool = doc.moviebox.auth_tokens;
+      }
+    }
+  } catch (e) {}
+
+  for (const fallbackToken of pool) {
     const test = await testMovieBoxToken(fallbackToken, apiBase, webBase);
     if (test.ok) {
-      await addVerifiedTokenToPool(fallbackToken);
       lastVerifiedHealthyToken = fallbackToken;
       lastVerifiedAt = Date.now();
       return { token: fallbackToken, source: "pool_verified" };
     }
   }
 
-  // 4. Ultimate fallback: if gateway was down, return top pool token anyway
-  if (pool.length > 0) {
-    return { token: pool[0], source: "fallback_pool", message: "Gateway unreachable, returned best available" };
-  }
-
-  return { token: null, source: "fallback_pool", message: "No tokens available" };
+  return { token: pool[0] || null, source: "fallback_pool", message: "Gateway unreachable" };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, inMemoryStore, isMongoConfigured } from "@/lib/mongodb";
 import { verifyAdminToken } from "@/lib/auth";
+import { getOrRefreshHealthyToken } from "@/lib/moviebox-token-server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,22 @@ export async function GET() {
     if (db) {
       const configDoc = await db.collection("app_config").findOne({ _id: "global_config" as any });
       if (configDoc) {
+        let authTokens: string[] = [];
+        if (configDoc.moviebox?.auth_tokens && Array.isArray(configDoc.moviebox.auth_tokens)) {
+          authTokens = configDoc.moviebox.auth_tokens.filter((t: any) => typeof t === "string" && t.length > 30);
+        }
+
+        if (authTokens.length === 0) {
+          try {
+            const fresh = await getOrRefreshHealthyToken(false);
+            if (fresh?.token) {
+              authTokens = [fresh.token];
+            }
+          } catch (e) {
+            console.warn("[Config] Failed to auto-mint token in config GET:", e);
+          }
+        }
+
         const mergedConfig = {
           ...inMemoryStore.config,
           ...configDoc,
@@ -31,10 +48,7 @@ export async function GET() {
           moviebox: {
             ...inMemoryStore.config.moviebox,
             ...(configDoc.moviebox || {}),
-            auth_tokens:
-              Array.isArray(configDoc.moviebox?.auth_tokens) && configDoc.moviebox.auth_tokens.length > 0
-                ? configDoc.moviebox.auth_tokens
-                : inMemoryStore.config.moviebox.auth_tokens,
+            auth_tokens: authTokens,
             web_base:
               configDoc.moviebox?.web_base ||
               inMemoryStore.config.moviebox?.web_base ||
@@ -61,6 +75,15 @@ export async function GET() {
     }
 
     // Fallback to in-memory store
+    if (!inMemoryStore.config.moviebox.auth_tokens || inMemoryStore.config.moviebox.auth_tokens.length === 0) {
+      try {
+        const fresh = await getOrRefreshHealthyToken(false);
+        if (fresh?.token) {
+          inMemoryStore.config.moviebox.auth_tokens = [fresh.token];
+        }
+      } catch {}
+    }
+
     return NextResponse.json(
       {
         success: true,

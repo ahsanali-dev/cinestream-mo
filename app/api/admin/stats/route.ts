@@ -71,6 +71,7 @@ export async function GET(req: Request) {
                 deviceModel: 1,
                 os: 1,
                 osVersion: 1,
+                appVersion: 1,
                 lastActiveAt: 1,
                 installedAt: 1,
                 currentScreen: 1,

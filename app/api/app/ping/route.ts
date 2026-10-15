@@ -30,26 +30,28 @@ export async function POST(request: NextRequest) {
 
     const now = new Date();
     const lastWrite = lastDbWriteByDevice.get(deviceId) || 0;
-    const shouldPersistToDb = now.getTime() - lastWrite >= 5 * 60 * 1000;
+    const existing = inMemoryStore.devices.get(deviceId);
+    const screenChanged = Boolean(currentScreen && existing && existing.currentScreen !== currentScreen);
+    const modelChanged = Boolean(deviceModel && !deviceModel.startsWith("Android Phone (") && (!existing || existing.deviceModel !== deviceModel));
+    const shouldPersistToDb = !existing || screenChanged || modelChanged || (now.getTime() - lastWrite >= 60 * 1000);
 
     // 1. Update In-Memory Store
-    const existing = inMemoryStore.devices.get(deviceId);
     if (existing) {
       existing.lastActiveAt = now;
-      existing.currentScreen = currentScreen || existing.currentScreen;
-      existing.appVersion = appVersion || existing.appVersion;
-      existing.streamProvider = streamProvider || existing.streamProvider;
-      if (deviceModel && !deviceModel.startsWith("Android Phone")) existing.deviceModel = deviceModel;
+      if (currentScreen) existing.currentScreen = currentScreen;
+      if (appVersion) existing.appVersion = appVersion;
+      if (streamProvider) existing.streamProvider = streamProvider;
+      if (deviceModel && !deviceModel.startsWith("Android Phone (")) existing.deviceModel = deviceModel;
       if (os) existing.os = os;
       if (osVersion) existing.osVersion = osVersion;
       existing.pingCount = (existing.pingCount || 0) + 1;
     } else {
       inMemoryStore.devices.set(deviceId, {
         deviceId,
-        deviceModel: deviceModel || "Android Device",
+        deviceModel: (deviceModel && !deviceModel.startsWith("Android Phone (")) ? deviceModel : "Android Device",
         os,
         osVersion,
-        appVersion: appVersion || "1.0.0",
+        appVersion: appVersion || "1.3.1",
         currentScreen: currentScreen || "HomeScreen",
         streamProvider: streamProvider || "moviebox",
         installedAt: now,
@@ -58,38 +60,39 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. Persist to MongoDB only once every 5 minutes per device or on new install
-    if (!existing || shouldPersistToDb) {
+    // 2. Persist to MongoDB immediately when screen or model changes, or at least every 60 seconds
+    if (shouldPersistToDb) {
       lastDbWriteByDevice.set(deviceId, now.getTime());
       const db = await getDb();
       if (db) {
-      const updateDoc: any = {
-        lastActiveAt: now,
-        currentScreen: currentScreen || "HomeScreen",
-        appVersion: appVersion || "1.0.0",
-        streamProvider: streamProvider || "moviebox",
-      };
-      if (deviceModel && !deviceModel.startsWith("Android Phone (")) {
-        updateDoc.deviceModel = deviceModel;
-      }
-      if (os) updateDoc.os = os;
-      if (osVersion) updateDoc.osVersion = osVersion;
+        const finalModel = (deviceModel && !deviceModel.startsWith("Android Phone ("))
+          ? deviceModel
+          : (existing?.deviceModel || "Android Device");
 
-      await db.collection("devices").updateOne(
-        { deviceId },
-        {
-          $set: updateDoc,
-          $setOnInsert: {
-            deviceId,
-            deviceModel: deviceModel || "Android Device",
-            installedAt: now,
+        const updateDoc: any = {
+          lastActiveAt: now,
+          deviceModel: finalModel,
+          currentScreen: currentScreen || (existing?.currentScreen || "HomeScreen"),
+          appVersion: appVersion || (existing?.appVersion || "1.3.1"),
+          streamProvider: streamProvider || (existing?.streamProvider || "moviebox"),
+        };
+        if (os) updateDoc.os = os;
+        if (osVersion) updateDoc.osVersion = osVersion;
+
+        await db.collection("devices").updateOne(
+          { deviceId },
+          {
+            $set: updateDoc,
+            $setOnInsert: {
+              deviceId,
+              installedAt: now,
+            },
+            $inc: { pingCount: 1 },
           },
-          $inc: { pingCount: 1 },
-        },
-        { upsert: true }
-      );
+          { upsert: true }
+        );
+      }
     }
-  }
 
     return NextResponse.json(
       {
