@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         deviceModel: (deviceModel && !deviceModel.startsWith("Android Phone (")) ? deviceModel : "Android Device",
         os,
         osVersion,
-        appVersion: appVersion || "1.3.1",
+        appVersion: appVersion || "1.3.2",
         currentScreen: currentScreen || "HomeScreen",
         streamProvider: streamProvider || "moviebox",
         installedAt: now,
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           lastActiveAt: now,
           deviceModel: finalModel,
           currentScreen: currentScreen || (existing?.currentScreen || "HomeScreen"),
-          appVersion: appVersion || (existing?.appVersion || "1.3.1"),
+          appVersion: appVersion || (existing?.appVersion || "1.3.2"),
           streamProvider: streamProvider || (existing?.streamProvider || "moviebox"),
         };
         if (os) updateDoc.os = os;
